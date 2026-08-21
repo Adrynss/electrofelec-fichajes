@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - planora-v2-8-build
+  pull_request:
+    branches:
+      - main
   workflow_dispatch:
 
 jobs:
