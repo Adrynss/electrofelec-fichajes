@@ -1,0 +1,50 @@
+name: Planora build check
+
+on:
+  push:
+    branches:
+      - planora-v2-8-build
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+
+      - name: Ensure Android SDK 35
+        run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-35" "build-tools;35.0.0" || true
+
+      - name: Reconstruct Planora source
+        run: |
+          cat .planora-build/part*.b64 | base64 -d > planora-ci.tar.xz
+          tar -xJf planora-ci.tar.xz
+
+      - name: Build debug APK
+        run: gradle -p Planora_CI :app:assembleDebug --no-daemon --stacktrace
+
+      - name: Build release bundle
+        run: gradle -p Planora_CI :app:bundleRelease --no-daemon --stacktrace
+
+      - name: Upload Planora build
+        uses: actions/upload-artifact@v4
+        with:
+          name: Planora-v2.8.0-build
+          path: |
+            Planora_CI/app/build/outputs/apk/debug/app-debug.apk
+            Planora_CI/app/build/outputs/bundle/release/app-release.aab
+          if-no-files-found: error
