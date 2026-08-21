@@ -1,1 +1,6 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><rect width="512" height="512" rx="120" fill="#050505"/><rect x="72" y="72" width="368" height="368" rx="92" fill="none" stroke="#56ff4a" stroke-width="22"/><text x="256" y="330" text-anchor="middle" font-family="Arial,sans-serif" font-size="230" font-weight="900" fill="#56ff4a">E</text></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+<defs><linearGradient id="g" x1="20" y1="220" x2="230" y2="28"><stop offset="0" stop-color="#006b45"/><stop offset=".48" stop-color="#18b525"/><stop offset="1" stop-color="#8df000"/></linearGradient></defs>
+<path d="M87 225A105 105 0 0 1 43 58 105 105 0 0 1 178 35" fill="none" stroke="url(#g)" stroke-width="20" stroke-linecap="butt"/>
+<path d="M188 39A105 105 0 0 1 213 196 105 105 0 0 1 101 230" fill="none" stroke="url(#g)" stroke-width="20" stroke-linecap="butt"/>
+<path d="M160 4 70 145h54L91 252l101-137h-55z" fill="url(#g)"/>
+</svg>
