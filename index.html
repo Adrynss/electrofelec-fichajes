@@ -8,22 +8,23 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Electrofelec">
 <meta name="format-detection" content="telephone=no">
-<link rel="manifest" href="./manifest.webmanifest">
-<link rel="icon" href="./icon.svg" type="image/svg+xml">
-<link rel="apple-touch-icon" href="./icon.svg">
+<link rel="manifest" href="./manifest.webmanifest?v=5">
+<link rel="icon" href="./icon.svg?v=5" type="image/svg+xml">
+<link rel="apple-touch-icon" href="./icon.svg?v=5">
 <title>Electrofelec Fichajes</title>
-<link rel="stylesheet" href="./style.css?v=4">
+<link rel="stylesheet" href="./style.css?v=5">
+<style>html,body{background:#003b21!important}.appShell{background:#f1f6f1!important}.loginPage{background:#003b21!important}</style>
 </head>
 <body>
 <section id="login" class="loginPage">
   <div class="loginBox">
-    <div class="loginBrand"><img src="./icon.svg" alt="Electrofelec"><div class="name">ELECTROFELEC</div><div class="sub">Registro interno de horas</div></div>
+    <div class="loginBrand"><img src="./icon.svg?v=5" alt="Electrofelec"><div class="name">ELECTROFELEC</div><div class="sub">Registro interno de horas</div></div>
     <div class="loginCard"><label>USUARIO</label><input id="username" autocomplete="username" autocapitalize="none" placeholder="Usuario"><label>PIN · 6 CIFRAS</label><input id="pin" type="password" inputmode="numeric" maxlength="6" autocomplete="current-password" placeholder="••••••"><button id="loginBtn" class="primaryBtn" style="margin-top:18px">ENTRAR</button><div id="loginMsg" class="msg"></div></div>
   </div>
 </section>
-<section id="changePin" class="loginPage hidden"><div class="loginBox"><div class="loginBrand"><img src="./icon.svg"><div class="name">NUEVO PIN</div><div class="sub">Elige un PIN personal de 6 cifras</div></div><div class="loginCard"><label>PIN ACTUAL</label><input id="oldPin" type="password" inputmode="numeric" maxlength="6"><label>PIN NUEVO</label><input id="newPin" type="password" inputmode="numeric" maxlength="6"><button id="changeBtn" class="primaryBtn" style="margin-top:18px">GUARDAR PIN</button><div id="pinMsg" class="msg"></div></div></div></section>
+<section id="changePin" class="loginPage hidden"><div class="loginBox"><div class="loginBrand"><img src="./icon.svg?v=5"><div class="name">NUEVO PIN</div><div class="sub">Elige un PIN personal de 6 cifras</div></div><div class="loginCard"><label>PIN ACTUAL</label><input id="oldPin" type="password" inputmode="numeric" maxlength="6"><label>PIN NUEVO</label><input id="newPin" type="password" inputmode="numeric" maxlength="6"><button id="changeBtn" class="primaryBtn" style="margin-top:18px">GUARDAR PIN</button><div id="pinMsg" class="msg"></div></div></div></section>
 <div id="main" class="appShell hidden">
-  <header class="topbar"><div class="brand"><img class="brandLogo" src="./icon.svg" alt="logo"><div class="brandWords"><div class="wordmark">ELECTROFELEC</div><div id="who" class="personName"></div></div></div><div class="online">ONLINE</div></header>
+  <header class="topbar"><div class="brand"><img class="brandLogo" src="./icon.svg?v=5" alt="logo"><div class="brandWords"><div class="wordmark">ELECTROFELEC</div><div id="who" class="personName"></div></div></div><div class="online">ONLINE</div></header>
   <main class="page">
     <section id="tabToday"></section>
     <section id="tabMonth" class="hidden"></section>
@@ -42,6 +43,6 @@
   <button id="companyBtn" class="navBtn adminOnly hidden" data-tab="Company"><span class="ico">▣</span>EMPRESA</button>
 </div></nav>
 <div id="editModal" class="modal hidden"><div class="modalPanel"><div class="modalHead"><div><div id="editTitle" class="modalTitle">Editar día</div><div class="period" style="text-align:left;margin:4px 0 0">Editar jornada</div></div><button id="closeEdit" class="closeX">×</button></div><div id="editBody"></div></div></div>
-<script src="./app.js?v=4"></script>
+<script src="./app.js?v=5"></script>
 </body>
 </html>
