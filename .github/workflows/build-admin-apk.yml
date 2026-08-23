@@ -47,14 +47,23 @@ jobs:
       - name: Build debug APK
         run: gradle :android-admin:assembleDebug
 
+      - name: Verify clean-install APK
+        run: |
+          APK=android-admin/build/outputs/apk/debug/android-admin-debug.apk
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose "$APK"
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | tee /tmp/badging.txt
+          grep -q "package: name='com.electrofelec.admin.gestor'" /tmp/badging.txt
+          grep -q "versionCode='1'" /tmp/badging.txt
+          grep -q "versionName='1.2-clean'" /tmp/badging.txt
+
       - name: Prepare artifact
         run: |
-          cp android-admin/build/outputs/apk/debug/android-admin-debug.apk Electrofelec_Admin_v1_2_GESTOR_MOVIL.apk
-          test -s Electrofelec_Admin_v1_2_GESTOR_MOVIL.apk
+          cp android-admin/build/outputs/apk/debug/android-admin-debug.apk Electrofelec_Admin_v1_2_INSTALACION_LIMPIA.apk
+          test -s Electrofelec_Admin_v1_2_INSTALACION_LIMPIA.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: Electrofelec_Admin_v1_2_GESTOR_MOVIL
-          path: Electrofelec_Admin_v1_2_GESTOR_MOVIL.apk
+          name: Electrofelec_Admin_v1_2_INSTALACION_LIMPIA
+          path: Electrofelec_Admin_v1_2_INSTALACION_LIMPIA.apk
           if-no-files-found: error
