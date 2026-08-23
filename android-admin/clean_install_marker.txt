@@ -1,0 +1,1 @@
+Electrofelec Admin v1.2 clean-install build. Package: com.electrofelec.admin.gestor
