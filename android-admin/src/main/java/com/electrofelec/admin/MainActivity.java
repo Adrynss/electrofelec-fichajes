@@ -1,33 +1,36 @@
 package com.electrofelec.admin;
 
 import android.app.Activity;
+import android.app.DownloadManager;
+import android.content.Context;
 import android.content.Intent;
 import android.graphics.Color;
 import android.net.Uri;
 import android.os.Bundle;
-import android.view.Window;
+import android.os.Environment;
 import android.webkit.CookieManager;
+import android.webkit.DownloadListener;
+import android.webkit.URLUtil;
 import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
+import android.widget.Toast;
 
 public class MainActivity extends Activity {
-    private static final int FILE_CHOOSER_REQUEST = 1001;
+    private static final int FILE_CHOOSER_REQUEST = 9011;
     private WebView webView;
-    private ValueCallback<Uri[]> fileCallback;
+    private ValueCallback<Uri[]> filePathCallback;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-
-        Window window = getWindow();
-        window.setStatusBarColor(Color.rgb(5, 7, 5));
-        window.setNavigationBarColor(Color.rgb(5, 7, 5));
+        getWindow().setStatusBarColor(Color.rgb(7, 16, 9));
+        getWindow().setNavigationBarColor(Color.rgb(7, 16, 9));
 
         webView = new WebView(this);
-        webView.setBackgroundColor(Color.rgb(5, 7, 5));
+        webView.setBackgroundColor(Color.rgb(7, 16, 9));
         setContentView(webView);
 
         WebSettings settings = webView.getSettings();
@@ -44,26 +47,43 @@ public class MainActivity extends Activity {
         webView.setWebViewClient(new WebViewClient());
         webView.setWebChromeClient(new WebChromeClient() {
             @Override
-            public boolean onShowFileChooser(WebView webView, ValueCallback<Uri[]> filePathCallback, FileChooserParams fileChooserParams) {
-                if (fileCallback != null) fileCallback.onReceiveValue(null);
-                fileCallback = filePathCallback;
-                Intent intent = fileChooserParams.createIntent();
-                intent.addCategory(Intent.CATEGORY_OPENABLE);
+            public boolean onShowFileChooser(WebView webView, ValueCallback<Uri[]> callback, FileChooserParams params) {
+                if (filePathCallback != null) filePathCallback.onReceiveValue(null);
+                filePathCallback = callback;
                 try {
+                    Intent intent = params.createIntent();
+                    intent.addCategory(Intent.CATEGORY_OPENABLE);
                     startActivityForResult(intent, FILE_CHOOSER_REQUEST);
                     return true;
-                } catch (Exception ex) {
-                    fileCallback = null;
+                } catch (Exception e) {
+                    filePathCallback = null;
+                    Toast.makeText(MainActivity.this, "No se pudo abrir el selector de archivos", Toast.LENGTH_SHORT).show();
                     return false;
                 }
             }
         });
 
-        webView.setDownloadListener((url, userAgent, contentDisposition, mimeType, contentLength) -> {
-            try {
-                Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
-                startActivity(intent);
-            } catch (Exception ignored) { }
+        webView.setDownloadListener(new DownloadListener() {
+            @Override
+            public void onDownloadStart(String url, String userAgent, String contentDisposition, String mimeType, long contentLength) {
+                try {
+                    String fileName = URLUtil.guessFileName(url, contentDisposition, mimeType);
+                    DownloadManager.Request request = new DownloadManager.Request(Uri.parse(url));
+                    request.setMimeType(mimeType);
+                    request.addRequestHeader("User-Agent", userAgent);
+                    String cookies = CookieManager.getInstance().getCookie(url);
+                    if (cookies != null) request.addRequestHeader("Cookie", cookies);
+                    request.setTitle(fileName);
+                    request.setDescription("Electrofelec · Descargando documento");
+                    request.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED);
+                    request.setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, fileName);
+                    DownloadManager dm = (DownloadManager) getSystemService(Context.DOWNLOAD_SERVICE);
+                    dm.enqueue(request);
+                    Toast.makeText(MainActivity.this, "Descarga iniciada", Toast.LENGTH_SHORT).show();
+                } catch (Exception e) {
+                    Toast.makeText(MainActivity.this, "No se pudo descargar el archivo", Toast.LENGTH_SHORT).show();
+                }
+            }
         });
 
         webView.loadUrl("file:///android_asset/index.html");
@@ -71,19 +91,14 @@ public class MainActivity extends Activity {
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        if (requestCode == FILE_CHOOSER_REQUEST) {
-            Uri[] result = null;
-            if (resultCode == RESULT_OK && data != null) {
-                Uri uri = data.getData();
-                if (uri != null) result = new Uri[]{uri};
-            }
-            if (fileCallback != null) {
-                fileCallback.onReceiveValue(result);
-                fileCallback = null;
-            }
-            return;
-        }
         super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == FILE_CHOOSER_REQUEST) {
+            if (filePathCallback != null) {
+                Uri[] result = WebChromeClient.FileChooserParams.parseResult(resultCode, data);
+                filePathCallback.onReceiveValue(result);
+                filePathCallback = null;
+            }
+        }
     }
 
     @Override
@@ -94,9 +109,9 @@ public class MainActivity extends Activity {
 
     @Override
     protected void onDestroy() {
-        if (fileCallback != null) {
-            fileCallback.onReceiveValue(null);
-            fileCallback = null;
+        if (filePathCallback != null) {
+            filePathCallback.onReceiveValue(null);
+            filePathCallback = null;
         }
         if (webView != null) {
             webView.destroy();
