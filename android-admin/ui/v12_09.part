@@ -1,0 +1,37 @@
+y));fd.append('payroll_month',String(m));fd.append('notes',$('payrollNotes').value||'');$('payrollUploadSave').disabled=true;setMsg('payrollUploadMsg','Subiendo nómina…',true);try{const rr=await fetch(API+'admin/payroll-upload',{method:'POST',body:fd});const z=await rr.json();if(!rr.ok||!z.ok){setMsg('payrollUploadMsg',z.error||'No se pudo subir');$('payrollUploadSave').disabled=false;return}setMsg('payrollUploadMsg','Nómina guardada',true);setTimeout(()=>{closeModal();renderPayroll()},350)}catch(e){setMsg('payrollUploadMsg','Sin conexión');$('payrollUploadSave').disabled=false}}}
+async function renderPayroll(){
+ const y=payrollCursor.getFullYear(),m=payrollCursor.getMonth(),[a,b]=payrollBounds(y,m);
+ $('payrollLabel').textContent='Nóminas · '+payrollCursor.toLocaleDateString('es-ES',{month:'long',year:'numeric'});
+ $('payrollPeriod').textContent='Periodo '+iso(a).split('-').reverse().join('/')+' → '+iso(b).split('-').reverse().join('/');
+ $('payrollFiles').innerHTML='<div class="loading">Cargando nóminas reales…</div>';
+ $('payrollTable').innerHTML='<div class="loading">Cargando resumen de horas…</div>';
+ const [r,fr]=await Promise.all([
+   api('admin/summary',{p_session_token:token,p_start_date:iso(a),p_end_date:iso(b)}),
+   api('admin/payroll-files',{p_session_token:token,payroll_year:y,payroll_month:m+1})
+ ]);
+ if(!r.ok){$('payrollTable').innerHTML='<div class="bad">'+esc(r.error||'Error')+'</div>';return}
+ payrollFiles=fr.ok?(fr.items||[]):[];
+ const arr=(r.employees||[]).filter(e=>e.active!==false),t=arr.reduce((o,e)=>{o.n+=n(e.normal);o.e+=n(e.extra);o.f+=n(e.holiday);o.v+=n(e.vacations);o.b+=n(e.sick);o.a+=n(e.absences);return o},{n:0,e:0,f:0,v:0,b:0,a:0});
+ $('payrollFiles').innerHTML=arr.map(e=>{const f=payrollFileFor(e.id);return `<div class="payroll-doc ${f?'has-file':'missing'}"><div class="rowTop"><div class="grow"><div class="rowName">${esc(e.full_name)}</div><div class="payroll-state ${f?'ok':'pending'}">${f?'● NÓMINA SUBIDA':'○ PENDIENTE DE SUBIR'}</div></div></div>${f?`<div class="payroll-file-name">📄 ${esc(f.original_name)}</div><div class="rowMeta">${formatBytes(f.size_bytes)} · ${new Date(f.uploaded_at).toLocaleDateString('es-ES')}</div>`:`<div class="rowMeta" style="margin-top:8px">No hay archivo de nómina para este periodo.</div>`}<div class="toolbar" style="margin-top:10px">${f?`<button class="btn small" data-payview="${f.id}">VER / DESCARGAR</button><button class="btn secondary small" data-payupload="${e.id}">SUSTITUIR</button><button class="btn danger small" data-paydelete="${f.id}">ELIMINAR</button>`:`<button class="btn small" data-payupload="${e.id}">+ ADJUNTAR NÓMINA</button>`}</div></div>`}).join('')||'<div class="rowCard muted">No hay trabajadores activos.</div>';
+ $$('[data-payview]').forEach(b=>b.onclick=()=>downloadPayroll(b.dataset.payview));
+ $$('[data-payupload]').forEach(b=>b.onclick=()=>openPayrollUpload(b.dataset.payupload));
+ $$('[data-paydelete]').forEach(b=>b.onclick=()=>deletePayroll(b.dataset.paydelete));
+ $('payrollCards').innerHTML=`<div class="card kpi"><div class="label">Normales</div><div class="value">${fmt(t.n)} h</div></div><div class="card kpi"><div class="label">Extra</div><div class="value good">${fmt(t.e)} h</div></div><div class="card kpi"><div class="label">Festivas</div><div class="value warn">${fmt(t.f)} h</div></div><div class="card kpi"><div class="label">Vacaciones</div><div class="value">${fmt(t.v)} d</div></div>`;
+ $('payrollTable').innerHTML=`<div class="table-wrap"><table><thead><tr><th>Trabajador</th><th>Nómina</th><th>Normal</th><th>Extra</th><th>Festiva</th><th>Vac.</th><th>Baja</th><th>Falta</th></tr></thead><tbody>${arr.map(e=>{const f=payrollFileFor(e.id);return `<tr><td><b>${esc(e.full_name)}</b></td><td class="${f?'good':'warn'}">${f?'SUBIDA':'PENDIENTE'}</td><td>${fmt(e.normal)}</td><td class="good"><b>${fmt(e.extra)}</b></td><td class="warn">${fmt(e.holiday)}</td><td>${fmt(e.vacations)}</td><td>${fmt(e.sick)}</td><td>${fmt(e.absences)}</td></tr>`}).join('')}</tbody></table></div>`;
+ if(!fr.ok)$('payrollFiles').insertAdjacentHTML('afterbegin','<div class="rowCard bad">No se pudieron cargar archivos: '+esc(fr.error||'Error')+'</div>')
+}
+$('prevPayroll').onclick=()=>{payrollCursor=new Date(payrollCursor.getFullYear(),payrollCursor.getMonth()-1,1);renderPayroll()};
+$('nextPayroll').onclick=()=>{payrollCursor=new Date(payrollCursor.getFullYear(),payrollCursor.getMonth()+1,1);renderPayroll()};
+
+async function renderDaily(){
+ const date=$('dailyDate').value||iso(new Date());$('dailyList').innerHTML='<div class="loading">Cargando día…</div>';
+ try{const list=activeEmployees(),res=await Promise.all(list.map(async e=>[e, (await entries(date,date,e.id))[0]||null]));
+ $('dailyList').innerHTML=res.map(([e,r])=>`<button class="rowCard daily-row" data-dailyemp="${e.id}"><div class="rowTop"><div class="grow"><div class="rowName">${esc(e.full_name)}</div><div class="rowMeta">${r?esc(r.worksite||incidentText(r.incident)):'Sin registro'}</div></div>${r?`<span class="badge">${r.incident?incidentCode(r.incident):(fmt(r.normal)+' h')}</span>`:'<span class="badge off">SIN DATOS</span>'}</div>${r?`<div class="rowMeta" style="margin-top:7px">Normal ${fmt(r.normal)} · Extra ${fmt(r.extra)} · Festiva ${fmt(r.holiday)} · Personal ${fmt(r.personal)}${r.notes?' · '+esc(r.notes):''}</div>`:''}</button>`).join('');
+ $$('[data-dailyemp]').forEach(b=>b.onclick=()=>openDayEditor(b.dataset.dailyemp,date));
+ }catch(e){$('dailyList').innerHTML='<div class="bad">'+esc(e.message)+'</div>'}
+}
+$('dailyDate').onchange=renderDaily;$('prevDaily').onclick=()=>{let d=new Date(($('dailyDate').value||iso(new Date()))+'T12:00:00');d.setDate(d.getDate()-1);$('dailyDate').value=iso(d);renderDaily()};$('nextDaily').onclick=()=>{let d=new Date(($('dailyDate').value||iso(new Date()))+'T12:00:00');d.setDate(d.getDate()+1);$('dailyDate').value=iso(d);renderDaily()};
+$('logoutBtn').onclick=async()=>{try{await api('logout',{p_session_token:token})}catch{}localStorage.removeItem('efa_token');location.reload()};
+boot();
+})();
+</script></body></html>
