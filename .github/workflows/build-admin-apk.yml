@@ -37,24 +37,31 @@ jobs:
       - name: Prepare Gestor mobile UI
         run: |
           mkdir -p android-admin/src/main/assets
-          cat android-admin/ui/v12_*.part > android-admin/src/main/assets/index.html
+          base64 -d android-admin/admin_html_v13.gz.b64 | gzip -dc > android-admin/src/main/assets/index.html
           test -s android-admin/src/main/assets/index.html
-          grep -q "Electrofelec Admin v1.2" android-admin/src/main/assets/index.html
-          grep -q "Documentos caducados" android-admin/src/main/assets/index.html
+          grep -q "Electrofelec Admin v1.3" android-admin/src/main/assets/index.html
+          grep -q "Trabajadores activos" android-admin/src/main/assets/index.html
+          grep -q 'data-mobile-tab="Workers"' android-admin/src/main/assets/index.html
+          grep -q 'circle cx="256"' android-admin/src/main/assets/index.html
           grep -q "Nóminas del mes" android-admin/src/main/assets/index.html
           grep -q "Obra debajo de las horas" android-admin/src/main/assets/index.html
 
       - name: Build debug APK
         run: gradle :android-admin:assembleDebug
 
+      - name: Verify APK
+        run: |
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose android-admin/build/outputs/apk/debug/android-admin-debug.apk
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging android-admin/build/outputs/apk/debug/android-admin-debug.apk | head -5
+
       - name: Prepare artifact
         run: |
-          cp android-admin/build/outputs/apk/debug/android-admin-debug.apk Electrofelec_Admin_v1_2_GESTOR_MOVIL.apk
-          test -s Electrofelec_Admin_v1_2_GESTOR_MOVIL.apk
+          cp android-admin/build/outputs/apk/debug/android-admin-debug.apk Electrofelec_Admin_v1_3_GESTOR_MOVIL.apk
+          test -s Electrofelec_Admin_v1_3_GESTOR_MOVIL.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: Electrofelec_Admin_v1_2_GESTOR_MOVIL
-          path: Electrofelec_Admin_v1_2_GESTOR_MOVIL.apk
+          name: Electrofelec_Admin_v1_3_GESTOR_MOVIL
+          path: Electrofelec_Admin_v1_3_GESTOR_MOVIL.apk
           if-no-files-found: error
