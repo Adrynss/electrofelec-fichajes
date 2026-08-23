@@ -34,16 +34,18 @@ jobs:
         with:
           gradle-version: '8.10.2'
 
-      - name: Prepare Gestor mobile UI
+      - name: Prepare Gestor mobile UI v1.4
         run: |
           mkdir -p android-admin/src/main/assets
           cat android-admin/ui/v13gz_*.part > /tmp/admin_v13.gz.b64
           base64 -d /tmp/admin_v13.gz.b64 | gzip -dc > android-admin/src/main/assets/index.html
+          python android-admin/patch_v14.py
           test -s android-admin/src/main/assets/index.html
-          grep -q "Electrofelec Admin v1.3" android-admin/src/main/assets/index.html
-          grep -q "Trabajadores activos" android-admin/src/main/assets/index.html
-          grep -q 'data-mobile-tab="Workers"' android-admin/src/main/assets/index.html
-          grep -q 'circle cx="256"' android-admin/src/main/assets/index.html
+          grep -q "Electrofelec Admin v1.4" android-admin/src/main/assets/index.html
+          grep -q "APP v1.4" android-admin/src/main/assets/index.html
+          grep -q "viewBox=\"0 0 512 483\"" android-admin/src/main/assets/index.html
+          grep -q "admin/employees" android-admin/src/main/assets/index.html
+          grep -q "admin/summary" android-admin/src/main/assets/index.html
           grep -q "Nóminas del mes" android-admin/src/main/assets/index.html
           grep -q "Obra debajo de las horas" android-admin/src/main/assets/index.html
 
@@ -53,16 +55,18 @@ jobs:
       - name: Verify APK
         run: |
           "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose android-admin/build/outputs/apk/debug/android-admin-debug.apk
-          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging android-admin/build/outputs/apk/debug/android-admin-debug.apk | head -5
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging android-admin/build/outputs/apk/debug/android-admin-debug.apk | tee /tmp/badging.txt
+          grep -q "versionCode='5'" /tmp/badging.txt
+          grep -q "versionName='1.4-admin'" /tmp/badging.txt
 
       - name: Prepare artifact
         run: |
-          cp android-admin/build/outputs/apk/debug/android-admin-debug.apk Electrofelec_Admin_v1_3_GESTOR_MOVIL.apk
-          test -s Electrofelec_Admin_v1_3_GESTOR_MOVIL.apk
+          cp android-admin/build/outputs/apk/debug/android-admin-debug.apk Electrofelec_Admin_v1_4_GESTOR_MOVIL.apk
+          test -s Electrofelec_Admin_v1_4_GESTOR_MOVIL.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: Electrofelec_Admin_v1_3_GESTOR_MOVIL
-          path: Electrofelec_Admin_v1_3_GESTOR_MOVIL.apk
+          name: Electrofelec_Admin_v1_4_GESTOR_MOVIL
+          path: Electrofelec_Admin_v1_4_GESTOR_MOVIL.apk
           if-no-files-found: error
