@@ -1,0 +1,55 @@
+name: Build Electrofelec Admin APK
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK packages
+        run: yes | sdkmanager "platforms;android-35" "build-tools;35.0.0"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.10.2'
+
+      - name: Prepare admin UI
+        run: |
+          mkdir -p android-admin/src/main/assets
+          gzip -dc android-admin/admin_html.gz > android-admin/src/main/assets/index.html
+          test -s android-admin/src/main/assets/index.html
+          grep -q "Documentos PRL / Empresa" android-admin/src/main/assets/index.html
+
+      - name: Build debug APK
+        run: gradle :android-admin:assembleDebug
+
+      - name: Prepare artifact
+        run: |
+          cp android-admin/build/outputs/apk/debug/android-admin-debug.apk Electrofelec_Admin_v1_0.apk
+          test -s Electrofelec_Admin_v1_0.apk
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Electrofelec_Admin_v1_0
+          path: Electrofelec_Admin_v1_0.apk
+          if-no-files-found: error
