@@ -37,7 +37,8 @@ jobs:
       - name: Prepare Gestor mobile UI
         run: |
           mkdir -p android-admin/src/main/assets
-          base64 -d android-admin/admin_html_v13.gz.b64 | gzip -dc > android-admin/src/main/assets/index.html
+          cat android-admin/ui/v13gz_*.part > /tmp/admin_v13.gz.b64
+          base64 -d /tmp/admin_v13.gz.b64 | gzip -dc > android-admin/src/main/assets/index.html
           test -s android-admin/src/main/assets/index.html
           grep -q "Electrofelec Admin v1.3" android-admin/src/main/assets/index.html
           grep -q "Trabajadores activos" android-admin/src/main/assets/index.html
