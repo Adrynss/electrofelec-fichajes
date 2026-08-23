@@ -1,0 +1,41 @@
+lass="total-col">BAJA</th><th class="total-col">FALT.</th><th class="total-col">PERS.</th></tr></thead><tbody>';
+  for(const emp of list){
+    let tx=0,tf=0,tv=0,tb=0,ta=0,tp=0;
+    h+=`<tr><td class="worker-col"><b>${esc(emp.full_name)}</b><div class="small muted">${esc(emp.username||'')}</div></td>`;
+    for(let d=1;d<=b.getDate();d++){
+      const dt=new Date(y,m,d),s=iso(dt),e=monthData[emp.id]?.[s],wd=dt.getDay(),cls=wd===6?'sab':wd===0?'dom':'';
+      let val='',code='',work=e?.worksite||'',tip='';
+      if(e){tx+=n(e.extra);tf+=n(e.holiday);tp+=n(e.personal);if(e.incident==='vacation')tv++;if(e.incident==='sick_leave')tb++;if(e.incident==='absence')ta++;
+        code=incidentCode(e.incident); if(code)val=code; else if(n(e.normal))val=fmt(e.normal); else if(n(e.extra))val='E'+fmt(e.extra); else if(n(e.holiday))val='F'+fmt(e.holiday); else if(n(e.personal))val='P'+fmt(e.personal);
+        tip=[emp.full_name,s,work,incidentText(e.incident),e.notes||''].filter(Boolean).join(' · ')
+      }
+      const codeClass=e?.incident==='vacation'?'code-v':e?.incident==='sick_leave'?'code-b':e?.incident==='absence'?'code-f':e?.incident==='personal'?'code-p':'';
+      h+=`<td class="day-cell ${cls}" data-emp="${emp.id}" data-date="${s}" title="${esc(tip)}"><div class="cell-hours ${codeClass}">${esc(val||'')}</div><div class="work-mini">${esc(work||'')}</div></td>`
+    }
+    h+=`<td class="total-col good"><b>${fmt(tx)}</b></td><td class="total-col warn"><b>${fmt(tf)}</b></td><td class="total-col">${tv}</td><td class="total-col bad">${tb}</td><td class="total-col warn">${ta}</td><td class="total-col">${fmt(tp)}</td></tr>`
+  }
+  h+='</tbody></table>';$('matrixBox').innerHTML=h;
+  $$('.hours-grid td.day-cell').forEach(c=>c.onclick=()=>openDayEditor(c.dataset.emp,c.dataset.date));
+ }catch(e){$('matrixBox').innerHTML='<div class="loading bad">'+esc(e.message)+'</div>'}
+}
+$('prevMonth').onclick=()=>{monthCursor=new Date(monthCursor.getFullYear(),monthCursor.getMonth()-1,1);renderMonth()};$('nextMonth').onclick=()=>{monthCursor=new Date(monthCursor.getFullYear(),monthCursor.getMonth()+1,1);renderMonth()};$('reloadMonth').onclick=renderMonth;
+function openModal(title,body){$('modalTitle').textContent=title;$('modalBody').innerHTML=body;$('modal').classList.remove('hidden')}
+function closeModal(){$('modal').classList.add('hidden');$('modalBody').innerHTML=''}$('modalClose').onclick=closeModal;$('modal').onclick=e=>{if(e.target===$('modal'))closeModal()};
+async function openDayEditor(empId,date){const emp=employees.find(e=>e.id===empId);openModal((emp?.full_name||'Trabajador')+' · '+new Date(date+'T12:00:00').toLocaleDateString('es-ES',{weekday:'short',day:'numeric',month:'short'}),'<div class="loading">Cargando día…</div>');try{const arr=await entries(date,date,empId),e=arr[0]||{};$('modalBody').innerHTML=`<div class="hours"><div class="field"><label>NORMALES</label><input id="edNormal" type="number" step="0.25" value="${n(e.normal)}"></div><div class="field"><label>EXTRA</label><input id="edExtra" type="number" step="0.25" value="${n(e.extra)}"></div><div class="field"><label>FESTIVAS</label><input id="edHoliday" type="number" step="0.25" value="${n(e.holiday)}"></div><div class="field"><label>PERSONALES</label><input id="edPersonal" type="number" step="0.25" value="${n(e.personal)}"></div></div><div class="field"><label>INCIDENCIA</label><select id="edIncident"><option value="">Ninguna</option><option value="vacation">Vacaciones</option><option value="sick_leave">Baja / IT</option><option value="absence">Falta</option><option value="personal">Personal</option></select></div><div class="field"><label>OBRA / CLIENTE</label><input id="edWorksite" value="${esc(e.worksite||'')}"></div><div class="field"><label>OBSERVACIONES</label><textarea id="edNotes">${esc(e.notes||'')}</textarea></div><div class="grid2"><button id="saveDay" class="btn">GUARDAR</button><button id="clearDay" class="btn danger">BORRAR DÍA</button></div><div id="dayMsg" class="msg"></div>`;$('edIncident').value=e.incident||'';$('saveDay').onclick=async()=>{const r=await api('save',{p_session_token:token,p_work_date:date,p_normal:n($('edNormal').value),p_extra:n($('edExtra').value),p_holiday:n($('edHoliday').value),p_personal:n($('edPersonal').value),p_worksite:$('edWorksite').value,p_incident:$('edIncident').value||null,p_notes:$('edNotes').value,p_employee_id:empId});if(!r.ok){setMsg('dayMsg',r.error||'No se pudo guardar');return}setMsg('dayMsg','Guardado y sincronizado',true);setTimeout(()=>{closeModal();refreshActivePage()},350)};$('clearDay').onclick=async()=>{if(!confirm('¿Borrar este día?'))return;const r=await api('clear',{p_session_token:token,p_work_date:date,p_employee_id:empId});if(!r.ok){setMsg('dayMsg',r.error||'No se pudo borrar');return}closeModal();refreshActivePage()};}catch(err){$('modalBody').innerHTML='<div class="error">'+esc(err.message)+'</div>'}}
+async function renderDash(){
+ $('dashContent').innerHTML='<div class="loading">Cargando control documental…</div>';
+ const docs=await api('admin/documents',{p_session_token:token,p_status:null,p_scope:null,p_employee_id:null});
+ if(!docs.ok){$('dashContent').innerHTML='<div class="card bad">'+esc(docs.error||'Error cargando documentación')+'</div>';return}
+ const dc=docs.counts||{},items=docs.items||[];
+ const urgent=items.filter(d=>d.status==='expired'||d.status==='upcoming').sort((a,b)=>{
+   if(a.status!==b.status)return a.status==='expired'?-1:1;
+   return String(a.expiry_date||'9999-12-31').localeCompare(String(b.expiry_date||'9999-12-31'))
+ }).slice(0,12);
+ const emp=items.filter(d=>d.scope==='employee'),company=items.filter(d=>d.scope==='company');
+ const sc=(arr,status)=>arr.filter(x=>x.status===status).length;
+ $('dashContent').innerHTML=`
+ <div class="card hero"><div><h2><span class="brand-top-logo">${document.querySelector('.logo-svg')?.outerHTML||''}</span>Control CAE / PRL</h2><p>Estado documental de Electrofelec · ${esc(me.full_name)}</p></div><div class="sync-pill">● SUPABASE · ONLINE</div></div>
+ <div class="kpis">
+  <button class="card kpi" data-docstatus="expired"><div class="label">Documentos caducados</div><div class="value bad">${n(dc.expired)}</div><div class="sub">Requieren actuación</div></button>
+  <button class="card kpi" data-docstatus="upcoming"><div class="label">Próximos a caducar</div><div class="value warn">${n(dc.upcoming)}</div><div class="sub">Próximos 30 días</div></button>
+  <button class="card kpi" data-docstatus="pending"><div clas
