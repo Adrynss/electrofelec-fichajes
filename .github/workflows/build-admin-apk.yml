@@ -34,24 +34,28 @@ jobs:
         with:
           gradle-version: '8.10.2'
 
-      - name: Prepare admin UI
+      - name: Prepare Gestor mobile UI
         run: |
           mkdir -p android-admin/src/main/assets
-          gzip -dc android-admin/admin_html.gz > android-admin/src/main/assets/index.html
+          base64 -d android-admin/admin_html.gz.b64 | gzip -dc > android-admin/src/main/assets/index.html
           test -s android-admin/src/main/assets/index.html
-          grep -q "Documentos PRL / Empresa" android-admin/src/main/assets/index.html
+          grep -q "Registro de horas" android-admin/src/main/assets/index.html
+          grep -q "Obra debajo de las horas" android-admin/src/main/assets/index.html
+          grep -q "Usuarios / accesos" android-admin/src/main/assets/index.html
+          grep -q "CAE / PRL" android-admin/src/main/assets/index.html
+          grep -q "Electrofelec Admin v1.1" android-admin/src/main/assets/index.html
 
       - name: Build debug APK
         run: gradle :android-admin:assembleDebug
 
       - name: Prepare artifact
         run: |
-          cp android-admin/build/outputs/apk/debug/android-admin-debug.apk Electrofelec_Admin_v1_0.apk
-          test -s Electrofelec_Admin_v1_0.apk
+          cp android-admin/build/outputs/apk/debug/android-admin-debug.apk Electrofelec_Admin_v1_1_GESTOR_MOVIL.apk
+          test -s Electrofelec_Admin_v1_1_GESTOR_MOVIL.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: Electrofelec_Admin_v1_0
-          path: Electrofelec_Admin_v1_0.apk
+          name: Electrofelec_Admin_v1_1_GESTOR_MOVIL
+          path: Electrofelec_Admin_v1_1_GESTOR_MOVIL.apk
           if-no-files-found: error
