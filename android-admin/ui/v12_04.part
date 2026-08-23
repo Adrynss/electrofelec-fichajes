@@ -1,0 +1,59 @@
+ción</h2><div id="profileContent"></div><div class="notice" style="margin-top:12px">Esta app trabaja directamente con Supabase. No necesita que el Gestor de casa esté abierto.</div></div><div class="card"><h2 style="font-size:16px;margin-top:0">Aplicación</h2><div class="rowMeta">Electrofelec Admin v1.2 · Diseño Gestor móvil</div><button id="logoutBtn" class="btn danger" style="width:100%;margin-top:16px">Cerrar sesión</button></div></div></section>
+ </main></div>
+</div>
+<div id="modal" class="modal hidden"><div class="sheet"><div class="sheetHead"><h3 id="modalTitle"></h3><button id="modalClose" class="close">×</button></div><div id="modalBody"></div></div></div>
+<script>
+(()=>{
+const API='https://kbdmraxjfgtttopsyfuy.supabase.co/functions/v1/electrofelec-admin/api/';
+let token=localStorage.getItem('efa_token')||'', me=null, employees=[], monthCursor=new Date(), monthData={}, vacData=[], docItems=[], payrollFiles=[], activePage='Dash', dailyDate=new Date(), payrollCursor=new Date();
+const $=id=>document.getElementById(id), $$=s=>[...document.querySelectorAll(s)], n=v=>Number(v||0), esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])), pad=v=>String(v).padStart(2,'0');
+const iso=d=>d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
+const fmt=v=>Number.isInteger(n(v))?String(n(v)):String(Math.round(n(v)*100)/100).replace('.',',');
+function payrollBounds(y,m){return [new Date(y,m-1,21),new Date(y,m,20)]}
+function monthBounds(y,m){return [new Date(y,m,1),new Date(y,m+1,0)]}
+function setMsg(id,t,ok=false){const e=$(id);if(!e)return;e.textContent=t||'';e.className='msg '+(t?(ok?'ok':'error'):'')}
+async function api(path,body={}){try{const r=await fetch(API+path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});const j=await r.json().catch(()=>({ok:false,error:'Respuesta no válida'}));if(!r.ok&&j.ok!==false)j.ok=false;return j}catch(e){return {ok:false,error:'Sin conexión'}}}
+async function entries(a,b,employee){const r=await api('entries',{p_session_token:token,p_start_date:a,p_end_date:b,p_employee_id:employee||null});if(!r.ok)throw new Error(r.error||'No se pudieron cargar los fichajes');return r.entries||[]}
+function incidentCode(v){return ({vacation:'VC',sick_leave:'IT',absence:'F',personal:'P'})[v]||''}
+function incidentText(v){return ({vacation:'Vacaciones',sick_leave:'Baja / IT',absence:'Falta',personal:'Personal'})[v]||'Ninguna'}
+function activeEmployees(){return employees.filter(e=>e.active!==false)}
+async function loadEmployees(){const r=await api('admin/employees',{p_session_token:token});if(!r.ok)throw new Error(r.error||'No se pudo cargar trabajadores');employees=r.employees||r.items||[];return employees}
+function showMain(){
+  $('loginView').classList.add('hidden');$('mainView').classList.remove('hidden');
+  $('who').textContent=me.full_name+' · Administrador';
+  $('profileContent').innerHTML=`<div class="notice"><b>${esc(me.full_name)}</b><br>Acceso administrador · Supabase bidireccional</div>`;
+  setupYears(); setupPayroll(); setupDaily();
+  loadEmployees().then(()=>showSection('Dash')).catch(e=>{$('dashContent').innerHTML='<div class="card bad">'+esc(e.message)+'</div>'})
+}
+async function boot(){if(!token)return;const r=await api('me',{p_session_token:token});if(!r.ok){localStorage.removeItem('efa_token');token='';return}if(r.role!=='admin'){localStorage.removeItem('efa_token');token='';setMsg('loginMsg','Esta app es solo para administradores');return}me=r;showMain()}
+$('loginBtn').onclick=async()=>{const u=$('loginUser').value.trim(),p=$('loginPin').value.trim();if(!u||!/^[0-9]{6}$/.test(p)){setMsg('loginMsg','Introduce usuario y PIN de 6 cifras');return}$('loginBtn').disabled=true;setMsg('loginMsg','Entrando…',true);const r=await api('login',{p_username:u,p_pin:p});$('loginBtn').disabled=false;if(!r.ok){setMsg('loginMsg',r.error||'No se pudo iniciar sesión');return}token=r.session_token;localStorage.setItem('efa_token',token);const m=await api('me',{p_session_token:token});if(!m.ok){setMsg('loginMsg',m.error||'No se pudo cargar perfil');return}if(m.role!=='admin'){await api('logout',{p_session_token:token});localStorage.removeItem('efa_token');token='';setMsg('loginMsg','Este usuario no tiene permisos de administrador');return}me=m;showMain()};
+function showSection(name){
+  activePage=name;
+  $$('.section').forEach(s=>s.classList.remove('active'));
+  const sec=$('sec'+name); if(sec)sec.classList.add('active');
+  $$('.nav button[data-tab]').forEach(b=>b.classList.toggle('active',b.dataset.tab===name));
+  $('pageTitle').textContent=({Dash:'Dashboard',Workers:'Trabajadores',Users:'Usuarios / accesos',Month:'Registro de horas',Vac:'Vacaciones / ausencias',Payroll:'Nóminas',Documents:'CAE / PRL',Daily:'Registro diario',Works:'Obras y festivos',Config:'Configuración'})[name]||'Electrofelec';
+  closeDrawer();
+  if(name==='Dash')renderDash();
+  if(name==='Month')renderMonth();
+  if(name==='Vac')renderVacations();
+  if(name==='Workers')renderWorkers();
+  if(name==='Users')renderUsers();
+  if(name==='Payroll')renderPayroll();
+  if(name==='Documents')renderDocuments();
+  if(name==='Daily')renderDaily();
+  if(name==='Works'){renderWorksites();renderHolidays()}
+}
+$$('.nav button[data-tab]').forEach(b=>b.onclick=()=>showSection(b.dataset.tab));
+async function renderMonth(){
+ const y=monthCursor.getFullYear(),m=monthCursor.getMonth(),[a,b]=monthBounds(y,m),[pa,pb]=payrollBounds(y,m);
+ $('monthLabel').textContent=monthCursor.toLocaleDateString('es-ES',{month:'long',year:'numeric'});
+ $('payPeriod').textContent='Periodo nómina '+iso(pa).split('-').reverse().join('/')+' → '+iso(pb).split('-').reverse().join('/');
+ $('matrixBox').innerHTML='<div class="loading">Cargando '+activeEmployees().length+' trabajadores…</div>';
+ try{
+  const list=activeEmployees();
+  const results=await Promise.all(list.map(async emp=>[emp.id,await entries(iso(a),iso(b),emp.id)]));
+  monthData=Object.fromEntries(results.map(([id,arr])=>[id,Object.fromEntries(arr.map(e=>[e.date,e]))]));
+  let h='<table class="hours-grid"><thead><tr><th class="worker-col">TRABAJADOR</th>';
+  for(let d=1;d<=b.getDate();d++){const dt=new Date(y,m,d),wd=dt.getDay(),cls=wd===6?'sab':wd===0?'dom':'';h+=`<th class="${cls}">${d}<div class="tiny">${dt.toLocaleDateString('es-ES',{weekday:'short'}).replace('.','')}</div></th>`}
+  h+='<th class="total-col">EXTRA</th><th class="total-col">FEST.</th><th class="total-col">VAC.</th><th class="total-col">BAJA</th><th c
