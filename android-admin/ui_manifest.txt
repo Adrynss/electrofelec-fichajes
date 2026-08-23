@@ -1,0 +1,1 @@
+Electrofelec Admin UI bundle. The APK build reconstructs android-admin/src/main/assets/index.html from human-readable source chunks stored under android-admin/ui/. It includes monthly all-worker view, vacation balances and paid vacation management, workers, PRL/employee documents, company documents, worksites and holidays.
