@@ -10,3 +10,4 @@
     private String read(InputStream in)throws IOException{if(in==null)return"";ByteArrayOutputStream b=new ByteArrayOutputStream();byte[] buf=new byte[4096];int n;while((n=in.read(buf))>0)b.write(buf,0,n);return b.toString(StandardCharsets.UTF_8.name());}
     interface Callback{void done(JSONObject r);}
 }
+
