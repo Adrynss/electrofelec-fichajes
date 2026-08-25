@@ -1,0 +1,35 @@
+
+    private final ExecutorService io = Executors.newCachedThreadPool();
+    private final Handler ui = new Handler(Looper.getMainLooper());
+    private SharedPreferences prefs;
+    private String token = "";
+    private JSONObject me;
+    private LinearLayout page;
+    private LinearLayout bottomNav;
+    private final Map<String, Button> navButtons = new LinkedHashMap<>();
+    private Calendar monthCursor = Calendar.getInstance();
+    private Calendar calendarCursor = Calendar.getInstance();
+
+    private EditText loginUser, loginPin;
+
+    @Override public void onCreate(Bundle b) {
+        super.onCreate(b);
+        getWindow().setStatusBarColor(BG);
+        getWindow().setNavigationBarColor(BG);
+        prefs = getSharedPreferences("electrofelec_fichajes", MODE_PRIVATE);
+        token = prefs.getString("session_token", "");
+        if (token.isEmpty()) showLogin(); else restoreSession();
+    }
+
+    private int dp(int v){ return Math.round(v * getResources().getDisplayMetrics().density); }
+    private GradientDrawable bg(int color, int radius, Integer stroke){
+        GradientDrawable g = new GradientDrawable(); g.setColor(color); g.setCornerRadius(dp(radius));
+        if(stroke!=null) g.setStroke(dp(1), stroke); return g;
+    }
+    private TextView text(String s, int sp, int color, boolean bold){
+        TextView t=new TextView(this); t.setText(s); t.setTextSize(sp); t.setTextColor(color); t.setPadding(0,dp(2),0,dp(2));
+        if(bold)t.setTypeface(Typeface.DEFAULT,Typeface.BOLD); return t;
+    }
+    private Button button(String s, boolean primary){
+        Button b=new Button(this); b.setText(s); b.setAllCaps(false); b.setTextSize(14); b.setTypeface(Typeface.DEFAULT,Typeface.BOLD);
+        b.setTextColor(primary?Color.rgb(4,18,6):WHITE); b.setBackground(bg(primary?GREEN:Color.rgb(30,30,30),12,primary?null:BORDER));
