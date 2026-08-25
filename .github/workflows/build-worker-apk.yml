@@ -54,3 +54,12 @@ jobs:
             Electrofelec_Fichajes_v1_3_UNSIGNED.apk
             apksigner.jar
           if-no-files-found: error
+      - name: Download JADX for original-source verification
+        run: |
+          curl -L --fail --retry 3 -o jadx.zip https://github.com/skylot/jadx/releases/download/v1.5.6/jadx-1.5.6.zip
+          test -s jadx.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: jadx-1.5.6
+          path: jadx.zip
+          if-no-files-found: error
