@@ -1,0 +1,35 @@
+        if(u.isEmpty()||p.length()!=6){toast("Introduce usuario y PIN de 6 cifras");return;}
+        loginUser.setEnabled(false);loginPin.setEnabled(false);
+        JSONObject body=new JSONObject(); try{body.put("p_username",u);body.put("p_pin",p);}catch(Exception ignored){}
+        rpc("login_with_pin",body,r->{
+            loginUser.setEnabled(true);loginPin.setEnabled(true);
+            if(!r.optBoolean("ok",false)){toast(r.optString("error","No se pudo iniciar sesión"));return;}
+            token=r.optString("session_token",""); prefs.edit().putString("session_token",token).apply();
+            if(r.optBoolean("must_change_pin",false)){showForcePin(p);return;} loadMe();
+        });
+    }
+
+    private void showForcePin(String oldPin){
+        LinearLayout root=new LinearLayout(this);root.setOrientation(LinearLayout.VERTICAL);root.setPadding(dp(20),dp(40),dp(20),dp(20));root.setBackgroundColor(BG);
+        LinearLayout c=card();root.addView(c);c.addView(text("Cambia tu PIN inicial",20,WHITE,true));c.addView(text("Por seguridad, elige un PIN personal de 6 cifras antes de continuar.",13,MUTED,false));
+        addLabel(c,"PIN NUEVO"); EditText n=field("6 cifras");n.setInputType(InputType.TYPE_CLASS_NUMBER|InputType.TYPE_NUMBER_VARIATION_PASSWORD);c.addView(n);
+        Button save=button("CAMBIAR PIN",true);LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,dp(52));lp.setMargins(0,dp(14),0,0);c.addView(save,lp);
+        save.setOnClickListener(v->{String np=n.getText().toString().trim();if(np.length()!=6){toast("El PIN debe tener 6 cifras");return;}JSONObject b=new JSONObject();try{b.put("p_session_token",token);b.put("p_current_pin",oldPin);b.put("p_new_pin",np);}catch(Exception ignored){}rpc("change_pin",b,r->{if(r.optBoolean("ok")){toast("PIN actualizado");loadMe();}else toast(r.optString("error","No se pudo cambiar"));});});
+        setContentView(root);
+    }
+
+    private void restoreSession(){ loadMe(); }
+    private void loadMe(){ JSONObject b=new JSONObject();try{b.put("p_session_token",token);}catch(Exception ignored){}rpc("app_me",b,r->{if(!r.optBoolean("ok",false)){prefs.edit().remove("session_token").apply();token="";showLogin();return;}me=r;showMain();}); }
+
+    private void showMain(){
+        LinearLayout shell=new LinearLayout(this);shell.setOrientation(LinearLayout.VERTICAL);shell.setBackgroundColor(BG);
+        LinearLayout top=new LinearLayout(this);top.setGravity(Gravity.CENTER_VERTICAL);top.setPadding(dp(14),dp(9),dp(14),dp(9));top.setBackgroundColor(Color.rgb(8,8,8));
+        ImageView logo=new ImageView(this);logo.setImageResource(R.drawable.electrofelec_logo);logo.setScaleType(ImageView.ScaleType.CENTER_INSIDE);top.addView(logo,new LinearLayout.LayoutParams(dp(46),dp(46)));
+        LinearLayout words=new LinearLayout(this);words.setOrientation(LinearLayout.VERTICAL);words.setPadding(dp(10),0,0,0);top.addView(words,new LinearLayout.LayoutParams(0,-2,1));words.addView(text("ELECTROFELEC",17,WHITE,true));words.addView(text(me.optString("full_name",""),12,MUTED,false));
+        TextView sync=text("ONLINE",11,GREEN,true);sync.setPadding(dp(8),dp(5),dp(8),dp(5));sync.setBackground(bg(Color.rgb(12,34,14),20,Color.rgb(48,95,50)));top.addView(sync);shell.addView(top,new LinearLayout.LayoutParams(-1,dp(64)));
+        ScrollView scroll=new ScrollView(this);page=new LinearLayout(this);page.setOrientation(LinearLayout.VERTICAL);page.setPadding(dp(14),dp(14),dp(14),dp(96));scroll.addView(page,new ScrollView.LayoutParams(-1,-2));shell.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));
+        buildNav(shell);setContentView(shell);showTab("Hoy");
+    }
+
+    private void buildNav(LinearLayout shell){
+        HorizontalScrollView hs=new HorizontalScrollView(this);hs.setHorizontalScrollBarEnabled(false);hs.setFillViewport(true);hs.setBackgroundColor(Color.rgb(8,8,8));
