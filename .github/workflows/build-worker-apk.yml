@@ -73,3 +73,13 @@ jobs:
           name: android-build-kit-35
           path: android-build-kit
           if-no-files-found: error
+      - name: Download Apktool for exact binary patch
+        run: |
+          curl -L --fail --retry 3 -o apktool.jar https://github.com/iBotPeaches/Apktool/releases/download/v2.11.1/apktool_2.11.1.jar
+          test -s apktool.jar
+          java -jar apktool.jar --version
+      - uses: actions/upload-artifact@v4
+        with:
+          name: apktool-2.11.1
+          path: apktool.jar
+          if-no-files-found: error
