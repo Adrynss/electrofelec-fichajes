@@ -1,0 +1,35 @@
+package com.electrofelec.fichajes;
+
+import android.app.*;
+import android.os.*;
+import android.content.*;
+import android.graphics.Color;
+import android.graphics.Typeface;
+import android.graphics.drawable.GradientDrawable;
+import android.text.InputType;
+import android.view.*;
+import android.widget.*;
+
+import org.json.*;
+
+import java.io.*;
+import java.net.*;
+import java.nio.charset.StandardCharsets;
+import java.text.SimpleDateFormat;
+import java.util.*;
+import java.util.concurrent.*;
+
+public class MainActivity extends Activity {
+    private static final String SUPABASE_URL = "https://kbdmraxjfgtttopsyfuy.supabase.co";
+    private static final String ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtiZG1yYXhqZmd0dHRvcHN5ZnV5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODcyNTE5NDQsImV4cCI6MjEwMjgyNzk0NH0.gCit774mda0gBpJADBL8xh3Zlsdfk81sXQy6cZ9lK1I";
+    private static final String REGISTRO_URL = SUPABASE_URL + "/functions/v1/electrofelec-registro-prueba/api/";
+
+    private static final int BG = Color.rgb(5,5,5);
+    private static final int CARD = Color.rgb(17,17,17);
+    private static final int BORDER = Color.rgb(45,45,45);
+    private static final int GREEN = Color.rgb(84,227,92);
+    private static final int WHITE = Color.rgb(245,245,245);
+    private static final int MUTED = Color.rgb(155,155,155);
+    private static final int YELLOW = Color.rgb(255,222,104);
+    private static final int RED = Color.rgb(255,135,135);
+    private static final int BLUE = Color.rgb(125,190,255);
