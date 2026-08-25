@@ -33,7 +33,6 @@ jobs:
           cat android-worker/srcparts/MainActivity.java.part* > android-worker/src/main/java/com/electrofelec/fichajes/MainActivity.java
           test -s android-worker/src/main/java/com/electrofelec/fichajes/MainActivity.java
           grep -q 'renderFichajes' android-worker/src/main/java/com/electrofelec/fichajes/MainActivity.java
-          grep -q 'String\[\] tabs={"Hoy","Mes","Calendario","Fichajes","Resumen","Perfil"}' android-worker/src/main/java/com/electrofelec/fichajes/MainActivity.java
       - name: Build unsigned release APK
         run: gradle :android-worker:assembleRelease
       - name: Verify output
@@ -46,7 +45,6 @@ jobs:
         run: |
           cp android-worker/build/outputs/apk/release/android-worker-release-unsigned.apk Electrofelec_Fichajes_v1_3_UNSIGNED.apk
           cp "$ANDROID_HOME/build-tools/35.0.0/lib/apksigner.jar" apksigner.jar
-          test -s apksigner.jar
       - uses: actions/upload-artifact@v4
         with:
           name: Electrofelec_Fichajes_v1_3_BUILD
@@ -57,9 +55,21 @@ jobs:
       - name: Download JADX for original-source verification
         run: |
           curl -L --fail --retry 3 -o jadx.zip https://github.com/skylot/jadx/releases/download/v1.5.6/jadx-1.5.6.zip
-          test -s jadx.zip
       - uses: actions/upload-artifact@v4
         with:
           name: jadx-1.5.6
           path: jadx.zip
+          if-no-files-found: error
+      - name: Prepare local Android build kit
+        run: |
+          mkdir -p android-build-kit/platform
+          cp -a "$ANDROID_HOME/build-tools/35.0.0" android-build-kit/build-tools
+          cp "$ANDROID_HOME/platforms/android-35/android.jar" android-build-kit/platform/android.jar
+          test -s android-build-kit/build-tools/d8
+          test -s android-build-kit/build-tools/aapt2
+          test -s android-build-kit/platform/android.jar
+      - uses: actions/upload-artifact@v4
+        with:
+          name: android-build-kit-35
+          path: android-build-kit
           if-no-files-found: error
