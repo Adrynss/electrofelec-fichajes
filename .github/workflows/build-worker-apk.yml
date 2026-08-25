@@ -42,10 +42,15 @@ jobs:
           "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging android-worker/build/outputs/apk/release/android-worker-release-unsigned.apk | tee /tmp/badging.txt
           grep -q "package: name='com.electrofelec.fichajes'" /tmp/badging.txt
           grep -q "versionName='1.3-fichajes'" /tmp/badging.txt
-      - name: Prepare artifact
-        run: cp android-worker/build/outputs/apk/release/android-worker-release-unsigned.apk Electrofelec_Fichajes_v1_3_UNSIGNED.apk
+      - name: Prepare artifact and signing tool
+        run: |
+          cp android-worker/build/outputs/apk/release/android-worker-release-unsigned.apk Electrofelec_Fichajes_v1_3_UNSIGNED.apk
+          cp "$ANDROID_HOME/build-tools/35.0.0/lib/apksigner.jar" apksigner.jar
+          test -s apksigner.jar
       - uses: actions/upload-artifact@v4
         with:
-          name: Electrofelec_Fichajes_v1_3_UNSIGNED
-          path: Electrofelec_Fichajes_v1_3_UNSIGNED.apk
+          name: Electrofelec_Fichajes_v1_3_BUILD
+          path: |
+            Electrofelec_Fichajes_v1_3_UNSIGNED.apk
+            apksigner.jar
           if-no-files-found: error
