@@ -1,0 +1,35 @@
+        b.setPadding(dp(10),dp(8),dp(10),dp(8)); return b;
+    }
+    private EditText field(String hint){
+        EditText e=new EditText(this); e.setHint(hint); e.setHintTextColor(Color.rgb(100,100,100)); e.setTextColor(WHITE); e.setTextSize(16);
+        e.setSingleLine(true); e.setPadding(dp(12),dp(11),dp(12),dp(11)); e.setBackground(bg(Color.rgb(9,9,9),12,BORDER)); return e;
+    }
+    private LinearLayout card(){
+        LinearLayout c=new LinearLayout(this); c.setOrientation(LinearLayout.VERTICAL); c.setPadding(dp(16),dp(14),dp(16),dp(14)); c.setBackground(bg(CARD,16,BORDER));
+        LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,-2); lp.setMargins(0,0,0,dp(12)); c.setLayoutParams(lp); return c;
+    }
+    private void addLabel(LinearLayout p,String s){ TextView t=text(s,12,Color.rgb(190,190,190),false); LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,-2);lp.setMargins(0,dp(10),0,dp(5));p.addView(t,lp); }
+    private void toast(String s){ Toast.makeText(this,s,Toast.LENGTH_SHORT).show(); }
+    private String today(){ return new SimpleDateFormat("yyyy-MM-dd",Locale.US).format(new Date()); }
+    private String iso(Calendar c){ return new SimpleDateFormat("yyyy-MM-dd",Locale.US).format(c.getTime()); }
+    private Calendar date(String s){ try{Date d=new SimpleDateFormat("yyyy-MM-dd",Locale.US).parse(s);Calendar c=Calendar.getInstance();c.setTime(d);return c;}catch(Exception e){return Calendar.getInstance();} }
+    private String humanDate(String s){ try{Date d=new SimpleDateFormat("yyyy-MM-dd",Locale.US).parse(s);return new SimpleDateFormat("EEE dd/MM",new Locale("es","ES")).format(d);}catch(Exception e){return s;} }
+    private String monthName(Calendar c){ return new SimpleDateFormat("MMMM yyyy",new Locale("es","ES")).format(c.getTime()); }
+
+    private void showLogin(){
+        ScrollView sv=new ScrollView(this); sv.setBackgroundColor(BG);
+        LinearLayout root=new LinearLayout(this); root.setOrientation(LinearLayout.VERTICAL); root.setPadding(dp(20),dp(34),dp(20),dp(30)); sv.addView(root,new ScrollView.LayoutParams(-1,-2));
+        ImageView logo=new ImageView(this); logo.setImageResource(com.electrofelec.fichajes.R.drawable.electrofelec_logo); logo.setAdjustViewBounds(true); root.addView(logo,new LinearLayout.LayoutParams(-1,dp(105)));
+        TextView title=text("ELECTROFELEC",25,WHITE,true); title.setGravity(Gravity.CENTER); root.addView(title);
+        TextView sub=text("Registro interno de horas",13,MUTED,false);sub.setGravity(Gravity.CENTER);root.addView(sub);
+        Space sp=new Space(this);root.addView(sp,new LinearLayout.LayoutParams(1,dp(24)));
+        LinearLayout c=card(); root.addView(c);
+        c.addView(text("Acceso",20,WHITE,true)); c.addView(text("Entra con tu usuario y PIN de 6 cifras.",13,MUTED,false));
+        addLabel(c,"USUARIO"); loginUser=field("Tu usuario"); loginUser.setInputType(InputType.TYPE_CLASS_TEXT); c.addView(loginUser);
+        addLabel(c,"PIN · 6 CIFRAS"); loginPin=field("••••••"); loginPin.setInputType(InputType.TYPE_CLASS_NUMBER|InputType.TYPE_NUMBER_VARIATION_PASSWORD); c.addView(loginPin);
+        Button login=button("ENTRAR",true); LinearLayout.LayoutParams blp=new LinearLayout.LayoutParams(-1,dp(52));blp.setMargins(0,dp(16),0,0);c.addView(login,blp);
+        login.setOnClickListener(v->doLogin()); setContentView(sv);
+    }
+
+    private void doLogin(){
+        String u=loginUser.getText().toString().trim(), p=loginPin.getText().toString().trim();
