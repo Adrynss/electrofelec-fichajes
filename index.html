@@ -3,46 +3,42 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
-<meta name="theme-color" content="#003b21">
+<meta name="theme-color" content="#022412">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Electrofelec">
 <meta name="format-detection" content="telephone=no">
-<link rel="manifest" href="./manifest.webmanifest?v=5">
-<link rel="icon" href="./icon.svg?v=5" type="image/svg+xml">
-<link rel="apple-touch-icon" href="./icon.svg?v=5">
+<link rel="manifest" href="./manifest.webmanifest?v=146">
+<link rel="icon" href="./icon.svg?v=146" type="image/svg+xml">
+<link rel="apple-touch-icon" href="./icon.svg?v=146">
 <title>Electrofelec Fichajes</title>
-<link rel="stylesheet" href="./style.css?v=5">
-<style>html,body{background:#003b21!important}.appShell{background:#f1f6f1!important}.loginPage{background:#003b21!important}</style>
+<link rel="stylesheet" href="./style.css?v=146">
 </head>
 <body>
 <section id="login" class="loginPage">
   <div class="loginBox">
-    <div class="loginBrand"><img src="./icon.svg?v=5" alt="Electrofelec"><div class="name">ELECTROFELEC</div><div class="sub">Registro interno de horas</div></div>
-    <div class="loginCard"><label>USUARIO</label><input id="username" autocomplete="username" autocapitalize="none" placeholder="Usuario"><label>PIN · 6 CIFRAS</label><input id="pin" type="password" inputmode="numeric" maxlength="6" autocomplete="current-password" placeholder="••••••"><button id="loginBtn" class="primaryBtn" style="margin-top:18px">ENTRAR</button><div id="loginMsg" class="msg"></div></div>
+    <div class="loginBrand"><img src="./icon.svg?v=146" alt="Electrofelec"><div class="name">ELECTROFELEC</div><div class="sub">Registro interno de horas</div></div>
+    <div class="loginCard">
+      <label>USUARIO</label><input id="username" autocomplete="username" autocapitalize="none" placeholder="Usuario">
+      <label>PIN · 6 CIFRAS</label><input id="pin" type="password" inputmode="numeric" maxlength="6" autocomplete="current-password" placeholder="••••••">
+      <button id="loginBtn" class="primaryBtn" style="margin-top:18px">ENTRAR</button><div id="loginMsg" class="msg"></div>
+    </div>
   </div>
 </section>
-<section id="changePin" class="loginPage hidden"><div class="loginBox"><div class="loginBrand"><img src="./icon.svg?v=5"><div class="name">NUEVO PIN</div><div class="sub">Elige un PIN personal de 6 cifras</div></div><div class="loginCard"><label>PIN ACTUAL</label><input id="oldPin" type="password" inputmode="numeric" maxlength="6"><label>PIN NUEVO</label><input id="newPin" type="password" inputmode="numeric" maxlength="6"><button id="changeBtn" class="primaryBtn" style="margin-top:18px">GUARDAR PIN</button><div id="pinMsg" class="msg"></div></div></div></section>
+<section id="changePin" class="loginPage hidden"><div class="loginBox"><div class="loginBrand"><img src="./icon.svg?v=146"><div class="name">NUEVO PIN</div><div class="sub">Elige un PIN personal de 6 cifras</div></div><div class="loginCard"><label>PIN ACTUAL</label><input id="oldPin" type="password" inputmode="numeric" maxlength="6"><label>PIN NUEVO</label><input id="newPin" type="password" inputmode="numeric" maxlength="6"><button id="changeBtn" class="primaryBtn" style="margin-top:18px">GUARDAR PIN</button><div id="pinMsg" class="msg"></div></div></div></section>
 <div id="main" class="appShell hidden">
-  <header class="topbar"><div class="brand"><img class="brandLogo" src="./icon.svg?v=5" alt="logo"><div class="brandWords"><div class="wordmark">ELECTROFELEC</div><div id="who" class="personName"></div></div></div><div class="online">ONLINE</div></header>
-  <main class="page">
-    <section id="tabToday"></section>
-    <section id="tabMonth" class="hidden"></section>
-    <section id="tabCalendar" class="hidden"></section>
-    <section id="tabSummary" class="hidden"></section>
-    <section id="tabProfile" class="hidden"></section>
-    <section id="tabCompany" class="hidden"></section>
-  </main>
+  <header class="topbar"><div class="brand"><img class="brandLogo" src="./icon.svg?v=146" alt="logo"><div class="brandWords"><div class="wordmark">ELECTROFELEC</div><div id="who" class="personName"></div></div></div><div id="onlineBadge" class="online">ONLINE</div></header>
+  <main id="pageRoot" class="page"></main>
 </div>
 <nav id="bottomNav" class="bottomNav hidden"><div class="bottomInner">
-  <button class="navBtn active" data-tab="Today"><span class="ico">⌂</span>HOY</button>
-  <button class="navBtn" data-tab="Month"><span class="ico">▤</span>MES</button>
-  <button class="navBtn" data-tab="Calendar"><span class="ico">▦</span>CALENDARIO</button>
-  <button class="navBtn" data-tab="Summary"><span class="ico">∑</span>RESUMEN</button>
-  <button class="navBtn" data-tab="Profile"><span class="ico">●</span>PERFIL</button>
-  <button id="companyBtn" class="navBtn adminOnly hidden" data-tab="Company"><span class="ico">▣</span>EMPRESA</button>
+  <button class="navBtn active" data-tab="today"><span class="ico">⌂</span><span>HOY</span></button>
+  <button class="navBtn" data-tab="month"><span class="ico">▦</span><span>MES</span></button>
+  <button class="navBtn" data-tab="fichajes"><span class="ico">✍</span><span>FICHAJES</span></button>
+  <button class="navBtn payrollNav" data-tab="payroll"><span class="ico">€</span><span>NÓMINAS</span><b id="payrollBadge" class="navBadge hidden">0</b></button>
+  <button class="navBtn" data-tab="more"><span class="ico">☰</span><span>MÁS</span></button>
 </div></nav>
-<div id="editModal" class="modal hidden"><div class="modalPanel"><div class="modalHead"><div><div id="editTitle" class="modalTitle">Editar día</div><div class="period" style="text-align:left;margin:4px 0 0">Editar jornada</div></div><button id="closeEdit" class="closeX">×</button></div><div id="editBody"></div></div></div>
-<script src="./app.js?v=5"></script>
+<div id="sheet" class="sheetBack hidden"><div id="sheetPanel" class="sheetPanel"></div></div>
+<div id="signatureModal" class="sheetBack hidden"><div class="sheetPanel signatureSheet"><div class="sheetTitleRow"><div><div id="sigTitle" class="sheetTitle">Firma</div><div id="sigSub" class="muted"></div></div><button id="sigClose" class="closeX">×</button></div><div class="sigBox"><canvas id="sigCanvas"></canvas></div><div class="sigActions"><button id="sigClear" class="secondaryBtn">BORRAR</button><button id="sigSave" class="primaryBtn">FIRMAR</button></div><div id="sigMsg" class="msg"></div></div></div>
+<script src="./app.js?v=146"></script>
 </body>
 </html>
