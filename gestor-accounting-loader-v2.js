@@ -1,1 +1,1 @@
-(async function(){try{let g=await fetch('https://adrynss.github.io/electrofelec-fichajes/ga2.js?v=19',{cache:'no-store'});eval(await g.text())}catch(e){console.error('Contabilidad loader',e)}})();
+(async function(){try{let g=await fetch('https://adrynss.github.io/electrofelec-fichajes/ga2.js?v=20',{cache:'no-store'});eval(await g.text());let e=await fetch('https://adrynss.github.io/electrofelec-fichajes/gestor-accounting-v181-europastry-link.js?v=1',{cache:'no-store'});if(e.ok)eval(await e.text())}catch(e){console.error('Contabilidad loader',e)}})();
