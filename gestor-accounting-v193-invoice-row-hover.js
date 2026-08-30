@@ -15,3 +15,7 @@ function bindRow(row){if(row.dataset.v193HoverBound==='1'||row.querySelector('td
 function mark(){try{css();let root=document.getElementById('accounting');if(!root)return;for(let t of root.querySelectorAll('table')){if(!isInvoiceTable(t))continue;t.classList.add('ac-v193-invoice-table');for(let row of t.querySelectorAll('tbody tr'))bindRow(row)}}catch(e){console.warn('Hover filas facturas v193',e)}}
 setTimeout(mark,40);setInterval(mark,180);
 })();
+
+/* El escritorio carga ga2.js de forma directa. Desde este archivo, que ga2 sí carga,
+   traemos también la política actual de anulaciones para no depender del loader antiguo. */
+(async function(){try{let r=await fetch('https://adrynss.github.io/electrofelec-fichajes/gestor-accounting-v195-order-only-cancel.js?v=4',{cache:'no-store'});if(r.ok)eval(await r.text());else console.warn('No se pudo cargar v195',r.status)}catch(e){console.warn('Carga directa v195',e)}})();
