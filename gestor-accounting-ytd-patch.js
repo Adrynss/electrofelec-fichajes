@@ -1,6 +1,6 @@
 (function(){
 'use strict';
-if(window.__efAccountingYtdV2)return;window.__efAccountingYtdV2=true;
+if(window.__efAccountingYtdV3)return;window.__efAccountingYtdV3=true;
 const MONTHS=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 function fmt(v){try{return typeof money==='function'?money(v):new Intl.NumberFormat('es-ES',{style:'currency',currency:'EUR'}).format(v)}catch{return (Number(v)||0).toFixed(2)+' €'}}
 function data(){try{return (db&&db.accounting&&Array.isArray(db.accounting.bankMovements))?db.accounting.bankMovements:[]}catch{return[]}}
@@ -8,18 +8,19 @@ function day(m){return String(m?.date||'').slice(0,10)}
 function totals(arr){let income=0,expenses=0;for(const m of arr){let v=Number(m?.amount)||0;if(v>0)income+=v;else if(v<0)expenses+=Math.abs(v)}return{income,expenses,net:income-expenses}}
 function latestBalance(arr){let withBal=arr.filter(m=>m?.balance!==null&&m?.balance!==undefined&&Number.isFinite(Number(m.balance))&&day(m));if(!withBal.length)return null;let maxDate=withBal.reduce((mx,m)=>day(m)>mx?day(m):mx,'');let same=withBal.filter(m=>day(m)===maxDate);let chosen=same[0];if(same.some(m=>Number.isFinite(Number(m.sourceRow)))){let rows=same.filter(m=>Number.isFinite(Number(m.sourceRow))).sort((a,b)=>Number(a.sourceRow)-Number(b.sourceRow));chosen=rows[0]||chosen}return{balance:Number(chosen.balance),date:maxDate,movement:chosen}}
 function css(){if(document.getElementById('acYtdCss'))return;let s=document.createElement('style');s.id='acYtdCss';s.textContent=`
-#acYtd{margin-top:12px;border-color:#315b3a;background:linear-gradient(135deg,#0f2015,#0b160f)}
-#acYtd .ac-ytd-head{display:flex;justify-content:space-between;gap:14px;align-items:flex-start;margin-bottom:12px}
+#accounting>.ac-grid:first-of-type{margin-bottom:22px!important}
+#acYtd{margin-top:22px!important;border-color:#315b3a;background:linear-gradient(135deg,#0f2015,#0b160f);box-shadow:0 0 0 1px rgba(70,125,83,.08)}
+#acYtd .ac-ytd-head{display:flex;justify-content:space-between;gap:14px;align-items:flex-start;margin-bottom:15px;padding-top:2px}
 #acYtd .ac-ytd-title{font-size:18px;font-weight:900}.ac-ytd-sub{font-size:12px;color:var(--muted);margin-top:3px}
-#acYtd .ac-ytd-kpis{display:grid;grid-template-columns:repeat(5,minmax(150px,1fr));gap:10px;margin-bottom:14px}
-#acYtd .ac-ytd-kpi{border:1px solid var(--line);border-radius:10px;padding:12px;background:#0b1710}
+#acYtd .ac-ytd-kpis{display:grid;grid-template-columns:repeat(5,minmax(150px,1fr));gap:12px;margin-bottom:16px}
+#acYtd .ac-ytd-kpi{border:1px solid var(--line);border-radius:10px;padding:13px;background:#0b1710}
 #acYtd .ac-ytd-kpi span{display:block;font-size:10px;font-weight:850;letter-spacing:.35px;color:var(--muted);text-transform:uppercase}
-#acYtd .ac-ytd-kpi b{display:block;font-size:22px;margin-top:5px;font-variant-numeric:tabular-nums}
+#acYtd .ac-ytd-kpi b{display:block;font-size:22px;margin-top:6px;font-variant-numeric:tabular-nums}
 #acYtd table{width:100%;border-collapse:collapse;table-layout:fixed}#acYtd th,#acYtd td{padding:8px 10px;border-bottom:1px solid #1f2c23;text-align:right;white-space:nowrap}
 #acYtd th:first-child,#acYtd td:first-child{text-align:left}#acYtd th{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.3px}
 #acYtd .ac-ytd-cover{margin-top:10px;font-size:12px;color:var(--muted)}#acYtd .good{color:#8ce5a4}#acYtd .bad{color:#ff9b9b}#acYtd .warn{color:#f2d46c}
-#acYtd .ac-balance-note{margin:10px 0 14px;padding:10px 12px;border:1px solid #2b5135;background:#0d1c12;border-radius:10px;font-size:12px;line-height:1.55}
-@media(max-width:1250px){#acYtd .ac-ytd-kpis{grid-template-columns:repeat(3,1fr)}}@media(max-width:900px){#acYtd .ac-ytd-kpis{grid-template-columns:1fr}#acYtd .table-wrap{overflow:auto}#acYtd table{min-width:600px}}
+#acYtd .ac-balance-note{margin:12px 0 16px;padding:11px 13px;border:1px solid #2b5135;background:#0d1c12;border-radius:10px;font-size:12px;line-height:1.55}
+@media(max-width:1250px){#acYtd .ac-ytd-kpis{grid-template-columns:repeat(3,1fr)}}@media(max-width:900px){#acYtd{margin-top:16px!important}#acYtd .ac-ytd-kpis{grid-template-columns:1fr}#acYtd .table-wrap{overflow:auto}#acYtd table{min-width:600px}}
 `;document.head.appendChild(s)}
 function render(){
  let root=document.getElementById('accounting');if(!root||!root.offsetParent)return;
