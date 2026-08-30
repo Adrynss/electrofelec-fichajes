@@ -1,1 +1,1 @@
-(async function(){try{let a=await fetch('https://adrynss.github.io/electrofelec-fichajes/gestor-accounting-ui.js?v=3',{cache:'no-store'});eval(await a.text());let b=await fetch('https://adrynss.github.io/electrofelec-fichajes/gestor-accounting-batch-ui.js?v=1',{cache:'no-store'});eval(await b.text())}catch(e){console.error('Contabilidad loader',e)}})();
+(async function(){try{let g=await fetch('https://adrynss.github.io/electrofelec-fichajes/ga2.js?v=8',{cache:'no-store'});eval(await g.text())}catch(e){console.error('Contabilidad loader',e)}})();
