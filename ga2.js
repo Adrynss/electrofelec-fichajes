@@ -27,9 +27,11 @@ const scripts=[
  ['gestor-accounting-v189-direct-invoice-review.js',2],
  ['gestor-accounting-v190-editor-layout.js',1],
  ['gestor-accounting-v192-editor-links-stable.js',2],
+ ['gestor-accounting-v193-editor-units.js',1],
  ['gestor-accounting-v193-invoice-row-hover.js',3],
  ['gestor-accounting-v194-import-stability.js',3],
- ['gestor-accounting-v195-order-only-cancel.js',4]
+ ['gestor-accounting-v195-order-only-cancel.js',4],
+ ['gestor-accounting-v196-invoice-status-pdf.js',1]
 ];
 for(let [file,ver] of scripts)await load(file,ver);
 console.info('Contabilidad Electrofelec cargada · bundle consolidado');
