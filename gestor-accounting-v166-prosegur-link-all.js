@@ -6,12 +6,11 @@ const N=s=>String(s??'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLower
 function A(){db.accounting=db.accounting||{};let a=db.accounting;a.invoices=a.invoices||[];a.orders=a.orders||[];return a}
 function poFrom(s){let t=String(s||'').toUpperCase();let m=t.match(/\bPO-ES\d{4}-\d{8}\b/);if(m)return m[0];m=t.match(/\bPO-[A-Z0-9]+(?:-[A-Z0-9]+){1,5}\b/);return m?m[0].replace(/\/\d+(?:\/\d+)*$/,''):''}
 function invoicePO(i){
-  // Para Prosegur el dato más fiable suele estar ya en el título/nombre del PDF.
-  // Priorizamos esos campos frente a detecciones antiguas del cuerpo del PDF.
   for(let s of [i.number,i.pdfName,i.sourceFile,i.originalName,i.fileName,i.notes,i.detectedOrderNumber,i.orderNumber]){let p=poFrom(s);if(p)return p}
   return'';
 }
 function orderMap(){let m=new Map();for(let o of A().orders){let p=poFrom(o.number)||String(o.number||'').trim().toUpperCase();if(p)m.set(N(p),o)}return m}
+function consume(i){return typeof window.acOrderConsumption==='function'?Number(window.acOrderConsumption(i))||0:(Number(i.taxableBase)||Number(i.baseImponible)||Number(i.orderUse)||Number(i.total)||0)}
 function relinkAll(save=true){
   let a=A(),map=orderMap(),linked=0,corrected=0,detected=0,missingOrder=0,noPO=0,changed=false;
   for(let i of a.invoices){
@@ -21,11 +20,8 @@ function relinkAll(save=true){
     if(i.detectedOrderNumber!==p){i.detectedOrderNumber=p;changed=true}
     let o=map.get(N(p));
     if(!o){missingOrder++;continue}
-    if(i.orderId!==o.id){
-      if(i.orderId)corrected++;else linked++;
-      i.orderId=o.id;changed=true;
-    }
-    let use=Number(i.total)||0;
+    if(i.orderId!==o.id){if(i.orderId)corrected++;else linked++;i.orderId=o.id;changed=true}
+    let use=consume(i);
     if(Number(i.orderUse)!==use){i.orderUse=use;changed=true}
   }
   if(changed&&save){try{saveData()}catch(e){console.warn('Guardar asociaciones',e)}}
