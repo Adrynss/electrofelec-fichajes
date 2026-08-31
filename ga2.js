@@ -23,7 +23,6 @@ const scripts=[
  ['gestor-accounting-v178-invoice-actions-bankmatch.js',1],
  ['gestor-accounting-v180-cancelled-docs.js',3],
  ['gestor-accounting-v181-europastry-link.js',1],
- ['gestor-accounting-v182-manual-order-link.js',1],
  ['gestor-accounting-v189-direct-invoice-review.js',2],
  ['gestor-accounting-v190-editor-layout.js',1],
  ['gestor-accounting-v192-editor-links-stable.js',2],
