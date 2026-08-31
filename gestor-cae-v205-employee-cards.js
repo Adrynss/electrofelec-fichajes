@@ -53,8 +53,14 @@ function ensureStyle(){
 async function paintPhoto(details,name){
   const av=details.querySelector('.ef-worker-avatar'); if(!av)return;
   const f=photoByName(name); if(!f?.file_id)return;
-  av.dataset.fileId=String(f.file_id);
-  const url=await signed(f.file_id); if(!url||!av.isConnected||av.dataset.fileId!==String(f.file_id))return;
+  const id=String(f.file_id);
+  if(av.dataset.loadedFileId===id&&av.querySelector('img'))return;
+  if(av.dataset.loadingFileId===id)return;
+  av.dataset.loadingFileId=id;
+  const url=await signed(f.file_id);
+  if(av.dataset.loadingFileId===id)delete av.dataset.loadingFileId;
+  if(!url||!av.isConnected)return;
+  av.dataset.loadedFileId=id;
   av.innerHTML='<img alt="Foto de '+esc2(name)+'">'; const img=av.querySelector('img'); if(img)img.src=url;
 }
 
