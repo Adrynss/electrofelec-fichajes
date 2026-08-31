@@ -34,7 +34,7 @@ jobs:
         with:
           gradle-version: '8.10.2'
 
-      - name: Prepare Gestor completo mobile UI v2.6
+      - name: Prepare Gestor completo mobile UI v2.7
         run: |
           mkdir -p android-admin/src/main/assets
           cat android-admin/ui/v13gz_*.part > /tmp/admin_v13.gz.b64
@@ -43,26 +43,23 @@ jobs:
           python android-admin/patch_v20.py
           python android-admin/patch_v25_clean.py
           python android-admin/patch_v26.py
+          python android-admin/patch_v27.py
           test -s android-admin/src/main/assets/index.html
-          grep -q "Electrofelec Admin v2.6" android-admin/src/main/assets/index.html
-          grep -q "APP v2.6" android-admin/src/main/assets/index.html
+          grep -q "Electrofelec Admin v2.7" android-admin/src/main/assets/index.html
+          grep -q "APP v2.7" android-admin/src/main/assets/index.html
           grep -q 'id="g26OwnPunch"' android-admin/src/main/assets/index.html
-          grep -q 'id="secMore"' android-admin/src/main/assets/index.html
+          grep -q 'Mis fichajes' android-admin/src/main/assets/index.html
+          grep -q 'Mis nóminas' android-admin/src/main/assets/index.html
+          grep -q 'G27_PAY' android-admin/src/main/assets/index.html
+          grep -q 'g27-mobile-table' android-admin/src/main/assets/index.html
+          grep -q 'function g27LoadMyPunches' android-admin/src/main/assets/index.html
+          grep -q 'function g27LoadMyPayroll' android-admin/src/main/assets/index.html
+          grep -q 'function g27OptimizeAccounting' android-admin/src/main/assets/index.html
           grep -q 'data-mobile-tab="Punches"' android-admin/src/main/assets/index.html
           grep -q 'data-mobile-tab="More"' android-admin/src/main/assets/index.html
-          grep -q 'Estado de fichajes' android-admin/src/main/assets/index.html
-          grep -q 'Fichajes de hoy' android-admin/src/main/assets/index.html
-          grep -q 'INICIAR JORNADA · 8 H' android-admin/src/main/assets/index.html
-          grep -q 'function g25Period' android-admin/src/main/assets/index.html
-          grep -q '/admin/today' android-admin/src/main/assets/index.html
           grep -q '/admin/time-range' android-admin/src/main/assets/index.html
-          grep -q '/admin/start-admin-day' android-admin/src/main/assets/index.html
-          grep -q '/admin/profiles' android-admin/src/main/assets/index.html
+          grep -q '/worker/list' android-admin/src/main/assets/index.html
           grep -q 'electrofelec-gestor-sync' android-admin/src/main/assets/index.html
-          ! grep -q 'Admin v2.1 · FIX trabajadores/horas' android-admin/src/main/assets/index.html
-          ! grep -q 'Admin v2.2 · FIX definitivo' android-admin/src/main/assets/index.html
-          ! grep -q 'Admin v2.3 · fichaje propio' android-admin/src/main/assets/index.html
-          ! grep -q 'Admin v2.4 · estabilidad' android-admin/src/main/assets/index.html
 
       - name: Validate Admin JavaScript
         run: |
@@ -88,17 +85,17 @@ jobs:
         run: |
           "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose android-admin/build/outputs/apk/debug/android-admin-debug.apk
           "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging android-admin/build/outputs/apk/debug/android-admin-debug.apk | tee /tmp/badging.txt
-          grep -q "versionCode='12'" /tmp/badging.txt
-          grep -q "versionName='2.6-admin'" /tmp/badging.txt
+          grep -q "versionCode='13'" /tmp/badging.txt
+          grep -q "versionName='2.7-admin'" /tmp/badging.txt
 
       - name: Prepare artifact
         run: |
-          cp android-admin/build/outputs/apk/debug/android-admin-debug.apk Electrofelec_Admin_v2_6_GESTOR_COMPLETO.apk
-          test -s Electrofelec_Admin_v2_6_GESTOR_COMPLETO.apk
+          cp android-admin/build/outputs/apk/debug/android-admin-debug.apk Electrofelec_Admin_v2_7_GESTOR_COMPLETO.apk
+          test -s Electrofelec_Admin_v2_7_GESTOR_COMPLETO.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: Electrofelec_Admin_v2_6_GESTOR_COMPLETO
-          path: Electrofelec_Admin_v2_6_GESTOR_COMPLETO.apk
+          name: Electrofelec_Admin_v2_7_GESTOR_COMPLETO
+          path: Electrofelec_Admin_v2_7_GESTOR_COMPLETO.apk
           if-no-files-found: error
