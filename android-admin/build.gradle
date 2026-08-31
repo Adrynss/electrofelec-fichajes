@@ -10,8 +10,8 @@ android {
         applicationId 'com.electrofelec.admin'
         minSdk 23
         targetSdk 35
-        versionCode 8
-        versionName '2.2-admin'
+        versionCode 9
+        versionName '2.3-admin'
     }
 
     compileOptions {
