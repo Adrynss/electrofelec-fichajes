@@ -18,7 +18,7 @@ const scripts=[
  ['gestor-accounting-v168-taxable-base.js',1],
  ['gestor-accounting-v169-prosegur-base-force.js',1],
  ['gestor-accounting-v170-retention-reconcile.js',1],
- ['gestor-accounting-v176-summary-render.js',1],
+ ['gestor-accounting-v176-summary-render.js',2],
  ['gestor-accounting-v177-europastry-orders.js',1],
  ['gestor-accounting-v178-invoice-actions-bankmatch.js',1],
  ['gestor-accounting-v180-cancelled-docs.js',3],
@@ -31,8 +31,7 @@ const scripts=[
  ['gestor-accounting-v194-import-stability.js',3],
  ['gestor-accounting-v195-order-only-cancel.js',5],
  ['gestor-accounting-v196-invoice-status-pdf.js',2],
- ['gestor-accounting-v197-ignore-invoice-toolbar-cleanup.js',1],
- ['gestor-accounting-v200-ignore-summary-safe.js',1]
+ ['gestor-accounting-v197-ignore-invoice-toolbar-cleanup.js',1]
 ];
 for(let [file,ver] of scripts)await load(file,ver);
 console.info('Contabilidad Electrofelec cargada · bundle consolidado');
