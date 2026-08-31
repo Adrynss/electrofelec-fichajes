@@ -36,28 +36,36 @@ function ensureStyle(){
   if(document.getElementById('ef-cae-cards-v206-style'))return;
   const st=document.createElement('style'); st.id='ef-cae-cards-v206-style';
   st.textContent=`
-  #cae .ef-worker-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(225px,1fr));gap:10px;margin-top:10px;align-items:start}
-  #cae .ef-worker-grid>details[data-worker]{margin:0!important;padding:0!important;min-width:0;border:1px solid #23382a!important;border-radius:13px!important;background:linear-gradient(155deg,#0d2013,#0a170e)!important;overflow:hidden;transition:border-color .15s ease,background .15s ease}
+  #cae .ef-worker-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;margin-top:12px;align-items:stretch}
+  #cae .ef-worker-grid>details[data-worker]{margin:0!important;padding:0!important;min-width:0;height:154px;border:1px solid #23382a!important;border-radius:15px!important;background:linear-gradient(155deg,#0d2013,#0a170e)!important;overflow:hidden;transition:border-color .15s ease,background .15s ease}
   #cae .ef-worker-grid>details[data-worker]:hover{border-color:#3d6848!important}
-  #cae .ef-worker-grid>details[data-worker][open]{grid-column:1/-1;border-color:#3b7046!important;background:#0b190f!important}
-  #cae .ef-worker-grid>details[data-worker]>summary{list-style:none!important;padding:11px 12px!important;cursor:pointer!important;min-height:88px!important;display:block!important}
+  #cae .ef-worker-grid>details[data-worker][open]{grid-column:1/-1;height:auto;border-color:#3b7046!important;background:#0b190f!important}
+  #cae .ef-worker-grid>details[data-worker]>summary{list-style:none!important;padding:14px!important;cursor:pointer!important;height:100%;box-sizing:border-box;display:block!important}
   #cae .ef-worker-grid>details[data-worker]>summary::-webkit-details-marker{display:none!important}
-  #cae .ef-worker-face{display:grid;grid-template-columns:60px minmax(0,1fr);gap:10px;align-items:center;min-width:0}
-  #cae .ef-worker-avatar{width:60px;height:60px;border-radius:11px;display:grid;place-items:center;overflow:hidden;background:#14291a;border:1px solid #31503a;color:#9bd8a5;font-weight:900;font-size:18px;letter-spacing:.4px}
+  #cae .ef-worker-face{display:grid;grid-template-columns:76px minmax(0,1fr);gap:13px;align-items:center;min-width:0;height:100%}
+  #cae .ef-worker-avatar{width:76px;height:76px;border-radius:13px;display:grid;place-items:center;overflow:hidden;background:#14291a;border:1px solid #31503a;color:#9bd8a5;font-weight:900;font-size:21px;letter-spacing:.4px}
   #cae .ef-worker-avatar img{width:100%;height:100%;object-fit:cover;display:block}
-  #cae .ef-worker-copy{min-width:0}
-  #cae .ef-worker-name{font-size:12px;font-weight:900;line-height:1.25;color:#f3f7f4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-  #cae .ef-worker-meta{margin-top:4px;color:#829688;font-size:9px;line-height:1.25;white-space:normal}
-  #cae .ef-worker-actions{display:flex;gap:6px;align-items:center;margin-top:7px;flex-wrap:wrap}
-  #cae .ef-worker-photo-btn{border:1px solid #31533a;background:#10291a;color:#b8e5bf;border-radius:8px;padding:5px 8px;font-size:9px;font-weight:800;cursor:pointer}
-  #cae .ef-worker-open{margin-left:auto;color:#6f8a77;font-size:11px}
-  #cae .ef-worker-grid>details[data-worker][open]>summary{min-height:0!important;padding:9px 11px!important;border-bottom:1px solid #203226}
-  #cae .ef-worker-grid>details[data-worker][open] .ef-worker-face{grid-template-columns:42px minmax(0,1fr);gap:9px}
-  #cae .ef-worker-grid>details[data-worker][open] .ef-worker-avatar{width:42px;height:42px;border-radius:9px;font-size:13px}
+  #cae .ef-worker-copy{min-width:0;align-self:stretch;display:flex;flex-direction:column;justify-content:center}
+  #cae .ef-worker-name{font-size:14px;font-weight:900;line-height:1.22;color:#f3f7f4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;min-height:34px}
+  #cae .ef-worker-dni{margin-top:5px;color:#b8c8bc;font-size:10px;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #cae .ef-worker-role{color:#708477;font-size:9px;margin-top:2px}
+  #cae .ef-worker-meta{margin-top:5px;color:#829688;font-size:9px;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #cae .ef-worker-actions{display:flex;gap:7px;align-items:center;margin-top:7px;flex-wrap:wrap}
+  #cae .ef-worker-photo-btn{border:1px solid #31533a;background:#10291a;color:#b8e5bf;border-radius:8px;padding:5px 9px;font-size:9px;font-weight:800;cursor:pointer}
+  #cae .ef-worker-open{margin-left:auto;color:#6f8a77;font-size:12px}
+  #cae .ef-worker-grid>details[data-worker][open]>summary{height:auto!important;padding:10px 12px!important;border-bottom:1px solid #203226}
+  #cae .ef-worker-grid>details[data-worker][open] .ef-worker-face{grid-template-columns:48px minmax(0,1fr);gap:10px;height:auto}
+  #cae .ef-worker-grid>details[data-worker][open] .ef-worker-avatar{width:48px;height:48px;border-radius:9px;font-size:14px}
+  #cae .ef-worker-grid>details[data-worker][open] .ef-worker-copy{display:grid;grid-template-columns:minmax(180px,1fr) minmax(180px,1fr);column-gap:16px;align-items:center}
+  #cae .ef-worker-grid>details[data-worker][open] .ef-worker-name{min-height:0}
+  #cae .ef-worker-grid>details[data-worker][open] .ef-worker-dni{margin-top:0}
+  #cae .ef-worker-grid>details[data-worker][open] .ef-worker-role{margin-top:1px}
   #cae .ef-worker-grid>details[data-worker][open] .ef-worker-meta{margin-top:1px}
   #cae .ef-worker-grid>details[data-worker][open] .ef-worker-actions{margin-top:3px}
-  @media(max-width:1100px){#cae .ef-worker-grid{grid-template-columns:repeat(auto-fill,minmax(205px,1fr));gap:8px}}
-  @media(max-width:620px){#cae .ef-worker-grid{grid-template-columns:repeat(2,minmax(0,1fr))}#cae .ef-worker-face{grid-template-columns:46px minmax(0,1fr);gap:7px}#cae .ef-worker-avatar{width:46px;height:46px}.ef-worker-photo-btn{padding:5px 6px!important}}
+  @media(max-width:1550px){#cae .ef-worker-grid{grid-template-columns:repeat(4,minmax(0,1fr))}}
+  @media(max-width:1220px){#cae .ef-worker-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+  @media(max-width:900px){#cae .ef-worker-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+  @media(max-width:560px){#cae .ef-worker-grid{grid-template-columns:1fr}#cae .ef-worker-grid>details[data-worker]{height:145px}#cae .ef-worker-face{grid-template-columns:68px minmax(0,1fr);gap:11px}#cae .ef-worker-avatar{width:68px;height:68px}#cae .ef-worker-grid>details[data-worker][open] .ef-worker-copy{display:block}}
   `;
   document.head.appendChild(st);
 }
@@ -119,8 +127,11 @@ function apply(){
       const name=d.dataset.worker||'';const sum=d.querySelector(':scope > summary')||d.querySelector('summary');if(!sum)continue;
       if(sum.dataset.efCard206!=='1'){
         const meta=(sum.querySelector('span')?.textContent||'').replace(/\s*▾\s*$/,'').trim();
+        const p=profileByName(name)||{};
+        const dni=String(p.dni_nie||'').trim()||'Sin DNI / NIE';
+        const role=String(p.role||'')==='admin'?'Administrador':(p.active===false?'Empleado inactivo':'Empleado');
         sum.dataset.efCard206='1';
-        sum.innerHTML=`<div class="ef-worker-face"><div class="ef-worker-avatar">${esc2(initials(name))}</div><div class="ef-worker-copy"><div class="ef-worker-name">${esc2(name)}</div><div class="ef-worker-meta">${esc2(meta)}</div><div class="ef-worker-actions"><button type="button" class="ef-worker-photo-btn">${photoByName(name)?'Cambiar foto':'+ Foto'}</button><span class="ef-worker-open">▾</span></div></div></div>`;
+        sum.innerHTML=`<div class="ef-worker-face"><div class="ef-worker-avatar">${esc2(initials(name))}</div><div class="ef-worker-copy"><div class="ef-worker-name">${esc2(name)}</div><div class="ef-worker-dni">DNI/NIE · <b>${esc2(dni)}</b></div><div class="ef-worker-role">${esc2(role)}</div><div class="ef-worker-meta">${esc2(meta)}</div><div class="ef-worker-actions"><button type="button" class="ef-worker-photo-btn">${photoByName(name)?'Cambiar foto':'+ Foto'}</button><span class="ef-worker-open">▾</span></div></div></div>`;
         const btn=sum.querySelector('.ef-worker-photo-btn');if(btn)btn.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();openPhotoModal(name)});
       }
       const mark=d.querySelector('.ef-worker-open');if(mark)mark.textContent=d.open?'▴':'▾';
@@ -134,5 +145,5 @@ ensureStyle();
 const root=document.getElementById('cae');if(root)new MutationObserver(schedule).observe(root,{childList:true,subtree:true});
 setInterval(()=>{try{apply()}catch(e){}},900);
 setTimeout(apply,150);
-console.info('CAE/PRL Gestor PC · tarjetas empleados v206 activo');
+console.info('CAE/PRL Gestor PC · tarjetas empleados v206 · 5 columnas + DNI');
 })();
