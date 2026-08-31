@@ -1,0 +1,75 @@
+from pathlib import Path
+
+p=Path('android-admin/src/main/assets/index.html')
+s=p.read_text(encoding='utf-8')
+
+s=s.replace('Electrofelec Admin v2.6','Electrofelec Admin v2.7')
+s=s.replace('v2.6 · Diseño Gestor móvil','v2.7 · Diseño Gestor móvil')
+s=s.replace('APP v2.6','APP v2.7')
+s=s.replace('· APP v2.6','· APP v2.7')
+
+# Añadir llamadas sin crear un segundo wrapper de navegación.
+old="setTimeout(g26LoadOwn,0)}else if(name==='Rates')"
+new="setTimeout(g26LoadOwn,0);setTimeout(g27LoadMyPunches,80)}else if(name==='Rates')"
+if old not in s: raise SystemExit('No se encontró hook Punches v2.6')
+s=s.replace(old,new,1)
+old="else if(name==='Accounting'){$('pageTitle').textContent='Contabilidad';g20LoadAccounting()}"
+new="else if(name==='Accounting'){$('pageTitle').textContent='Contabilidad';g20LoadAccounting();setTimeout(g27OptimizeAccounting,900)}"
+if old not in s: raise SystemExit('No se encontró hook Accounting v2.6')
+s=s.replace(old,new,1)
+old="else if(name==='More'){$('pageTitle').textContent='Más';g26RenderMore()}"
+new="else if(name==='Payroll'){setTimeout(g27LoadMyPayroll,80)}else if(name==='More'){$('pageTitle').textContent='Más';g26RenderMore()}"
+if old not in s: raise SystemExit('No se encontró hook More v2.6')
+s=s.replace(old,new,1)
+
+css=r'''
+/* ===== Admin v2.7 · fichajes propios, nóminas personales y contabilidad móvil ===== */
+.g27-personal-card{border-color:#2e5137!important;background:linear-gradient(155deg,#0d2115,#09130d)!important}.g27-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:11px}.g27-head h2{font-size:18px;margin:0 0 3px}.g27-period-nav{display:flex;gap:6px;align-items:center}.g27-period-nav button{width:38px;height:38px;border-radius:11px;padding:0}.g27-period{font-size:11px;color:var(--muted);font-weight:800}.g27-punch-list,.g27-pay-list{display:grid;gap:8px}.g27-punch-row{display:grid;grid-template-columns:86px minmax(0,1fr) auto;gap:10px;align-items:center;border:1px solid #26372b;border-radius:12px;padding:10px;background:#0a150d}.g27-punch-row.ok{border-color:#2e6d3d;background:#0d2113}.g27-punch-row.reg{border-color:#28586a;background:#0c1b20}.g27-punch-row.inc{border-color:#665629;background:#211b0d}.g27-date b{display:block;font-size:13px}.g27-date span{display:block;font-size:9px;color:var(--muted);text-transform:uppercase;margin-top:2px}.g27-punch-main b{display:block;font-size:13px}.g27-punch-main small{display:block;color:var(--muted);font-size:10px;margin-top:3px}.g27-punch-value{text-align:right;font-weight:900;font-size:13px}.g27-summary{display:flex;gap:7px;flex-wrap:wrap;margin:8px 0 11px}.g27-chip{border:1px solid #304238;border-radius:999px;padding:5px 8px;font-size:10px;color:#b9cabe;background:#0b160f}.g27-pay-row{display:grid;grid-template-columns:52px minmax(0,1fr);gap:11px;border:1px solid #27372c;border-radius:13px;padding:11px;background:#0a150d}.g27-pay-icon{width:48px;height:48px;border-radius:12px;display:grid;place-items:center;background:#17301d;color:#8bed78;font-size:22px;font-weight:900}.g27-pay-title{font-size:14px;font-weight:900}.g27-pay-meta{font-size:10px;color:var(--muted);margin-top:3px}.g27-pay-actions{display:flex;gap:6px;flex-wrap:wrap;margin-top:9px}.g27-pay-actions button{min-height:38px}.g27-signed{color:#8ef0a1}.g27-pending{color:#f0d57c}.g27-empty{padding:16px;border:1px dashed #304238;border-radius:12px;color:var(--muted);text-align:center}
+#accounting{min-width:0!important;max-width:100%!important}#accounting *{box-sizing:border-box}#accounting .g27-no-x{max-width:100%!important;min-width:0!important;overflow-x:visible!important}#accounting .g27-mobile-table{max-width:100%!important}
+@media(max-width:900px){
+ .g27-punch-row{grid-template-columns:72px minmax(0,1fr) auto;gap:8px;padding:9px}.g27-punch-value{font-size:12px}.g27-head{align-items:center}
+ #accounting{width:100%!important;overflow-x:hidden!important}#accounting>*,#accounting .card,#accounting [class*="panel"],#accounting [class*="section"]{max-width:100%!important;min-width:0!important}
+ #accounting [style*="min-width"]{min-width:0!important}#accounting [style*="width:"]{max-width:100%!important}#accounting input,#accounting select,#accounting textarea{width:100%!important;max-width:100%!important;min-width:0!important}#accounting button{max-width:100%;white-space:normal}
+ #accounting .grid2,#accounting .grid3,#accounting [class*="form-grid"],#accounting [class*="editor-grid"],#accounting .ac-v189-review{grid-template-columns:1fr!important;width:100%!important;max-width:100%!important;min-width:0!important}
+ #accounting [class*="toolbar"],#accounting [class*="actions"],#accounting [class*="filters"],#accounting [class*="tabs"]{flex-wrap:wrap!important;max-width:100%!important;overflow-x:visible!important;white-space:normal!important}
+ #accounting [class*="tabs"] button,#accounting [class*="toolbar"] button{flex:1 1 auto;min-width:0!important}
+ #accounting iframe,#accounting embed,#accounting object{display:block;width:100%!important;max-width:100%!important;height:56vh!important;min-width:0!important}
+ #accounting .g27-mobile-table{display:block!important;width:100%!important;min-width:0!important;border:0!important;background:transparent!important}.g27-mobile-table thead{display:none!important}.g27-mobile-table tbody{display:grid!important;gap:9px!important;width:100%!important}.g27-mobile-table tr{display:block!important;width:100%!important;min-width:0!important;border:1px solid #293a2e!important;border-radius:13px!important;padding:5px 10px!important;background:#0a150d!important;box-shadow:none!important}.g27-mobile-table td{display:grid!important;grid-template-columns:minmax(92px,34%) minmax(0,1fr)!important;gap:9px!important;width:100%!important;min-width:0!important;max-width:100%!important;padding:8px 0!important;border:0!important;border-bottom:1px solid #1e2c22!important;text-align:right!important;white-space:normal!important;overflow:visible!important;word-break:break-word!important}.g27-mobile-table td:last-child{border-bottom:0!important}.g27-mobile-table td::before{content:attr(data-label);display:block;text-align:left;color:#7f9386;font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:.45px}.g27-mobile-table td[colspan]{display:block!important;text-align:left!important}.g27-mobile-table td[colspan]::before{display:none}.g27-mobile-table td button,.g27-mobile-table td a{margin:2px;max-width:100%}
+ #accounting .ac-v189-review iframe,#accounting .ac-v189-review embed,#accounting .ac-v189-review object{position:static!important;top:auto!important}
+}
+@media(max-width:470px){.g27-punch-row{grid-template-columns:65px minmax(0,1fr)}.g27-punch-value{grid-column:2;text-align:left;margin-top:-3px}.g27-pay-row{grid-template-columns:43px minmax(0,1fr)}.g27-pay-icon{width:42px;height:42px}.g27-pay-actions button{flex:1 1 calc(50% - 6px)}}
+'''
+if 'Admin v2.7 · fichajes propios' not in s:
+    pos=s.rfind('</style>')
+    if pos<0: raise SystemExit('No se encontró </style>')
+    s=s[:pos]+css+s[pos:]
+
+js=r'''
+
+/* ===== Admin v2.7 · personal ===== */
+const G27_PAY='https://kbdmraxjfgtttopsyfuy.supabase.co/functions/v1/electrofelec-payroll-documents';
+let g27Self=null,g27PunchAnchor=new Date(),g27AccObserver=null,g27AccTimer=null;
+function g27Period(d){d=new Date(d||new Date());const y=d.getFullYear(),m=d.getMonth();return d.getDate()>=21?[new Date(y,m,21),new Date(y,m+1,20)]:[new Date(y,m-1,21),new Date(y,m,20)]}
+function g27ShiftPeriod(delta){const [a]=g27Period(g27PunchAnchor);g27PunchAnchor=new Date(a.getFullYear(),a.getMonth()+delta,25);g27LoadMyPunches()}
+async function g27GetSelf(){if(g27Self?.id)return g27Self;const z=await g20json(G20,'/admin/today');if(!z.ok)throw Error(z.error||'No se pudo identificar tu usuario');const id=String(z.current_admin_id||'');const p=(z.profiles||[]).find(x=>String(x.id)===id);if(!id)throw Error('No se ha podido identificar al administrador conectado');g27Self={id,full_name:p?.full_name||'Administrador'};return g27Self}
+function g27EnsureMyPunches(){if($('g27MyPunches'))return $('g27MyPunches');const sec=$('secPunches');if(!sec)return null;const card=document.createElement('div');card.id='g27MyPunches';card.className='card g27-personal-card';card.innerHTML='<div class="g27-head"><div><div class="g26-eyebrow">MI HISTORIAL</div><h2>Mis fichajes</h2><div class="muted small">Tus propios fichajes y registros del periodo 21 → 20</div></div><div class="g27-period-nav"><button id="g27PunchPrev" class="btn secondary">‹</button><button id="g27PunchNext" class="btn secondary">›</button></div></div><div id="g27PunchPeriod" class="g27-period"></div><div id="g27PunchBody"><div class="loading">Cargando tus fichajes…</div></div>';const before=sec.querySelector('.g26-team-card');if(before)sec.insertBefore(card,before);else sec.appendChild(card);$('g27PunchPrev').onclick=()=>g27ShiftPeriod(-1);$('g27PunchNext').onclick=()=>g27ShiftPeriod(1);return card}
+async function g27LoadMyPunches(){const card=g27EnsureMyPunches();if(!card)return;const body=$('g27PunchBody');body.innerHTML='<div class="loading">Cargando tus fichajes…</div>';try{const self=await g27GetSelf(),[a,b]=g27Period(g27PunchAnchor),z=await g20json(G20,'/admin/time-range',{start_date:iso(a),end_date:iso(b),employee_id:self.id});if(!z.ok)throw Error(z.error||'No se pudieron cargar tus fichajes');$('g27PunchPeriod').textContent='Periodo '+g20Date(iso(a))+' → '+g20Date(iso(b))+' · '+self.full_name;const rows=[...(z.entries||[])].sort((x,y)=>String(y.work_date||y.date).localeCompare(String(x.work_date||x.date)));let real=0,reg=0,inc=0;rows.forEach(e=>{const st=g20PunchStatus(e);if(st.kind==='clocked')real++;else if(st.kind==='regularized')reg++;else if(st.kind==='incident')inc++});body.innerHTML='<div class="g27-summary"><span class="g27-chip">Fichajes reales <b>'+real+'</b></span><span class="g27-chip">Regularizados <b>'+reg+'</b></span><span class="g27-chip">Incidencias <b>'+inc+'</b></span></div><div class="g27-punch-list">'+(rows.map(e=>{const date=String(e.work_date||e.date||'').slice(0,10),d=new Date(date+'T12:00:00'),st=g20PunchStatus(e),cl=st.kind==='clocked'?'ok':st.kind==='regularized'?'reg':st.kind==='incident'?'inc':'',hours=Number(e.normal_hours??e.normal??0),extra=Number(e.overtime_hours??e.extra??0),fest=Number(e.holiday_hours??e.holiday??0),detail=[hours?fmt(hours)+' h normales':'',extra?fmt(extra)+' h extra':'',fest?fmt(fest)+' h festivas':'',e.incident?incidentText(e.incident):'',e.worksite_text||e.worksite||''].filter(Boolean).join(' · ');return '<div class="g27-punch-row '+cl+'"><div class="g27-date"><b>'+g20Date(date).slice(0,5)+'</b><span>'+esc(d.toLocaleDateString('es-ES',{weekday:'short'}).replace('.',''))+'</span></div><div class="g27-punch-main"><b>'+esc(st.label)+'</b><small>'+esc(detail||'Registro de jornada')+'</small></div><div class="g27-punch-value">'+esc(st.time||'—')+'</div></div>'}).join('')||'<div class="g27-empty">No tienes registros en este periodo.</div>')+'</div>'}catch(e){body.innerHTML='<div class="g20-errorbox">'+esc(e.message||String(e))+'</div>'}}
+
+function g27EnsureMyPayroll(){if($('g27MyPayroll'))return $('g27MyPayroll');const sec=$('secPayroll');if(!sec)return null;const card=document.createElement('div');card.id='g27MyPayroll';card.className='card g27-personal-card';card.innerHTML='<div class="g27-head"><div><div class="g26-eyebrow">PERSONAL</div><h2>Mis nóminas</h2><div class="muted small">Tus nóminas personales publicadas en Supabase</div></div><button id="g27PayRefresh" class="g26-icon-btn">↻</button></div><div id="g27PayBody"><div class="loading">Cargando tus nóminas…</div></div>';sec.prepend(card);$('g27PayRefresh').onclick=g27LoadMyPayroll;return card}
+async function g27Pay(path,body={}){try{const r=await fetch(G27_PAY+path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(Object.assign({session_token:token},body)),cache:'no-store'});const z=await r.json().catch(()=>({ok:false,error:'Respuesta no válida'}));if(!r.ok&&z.ok!==false)z.ok=false;return z}catch(e){return{ok:false,error:'Sin conexión'}}}
+function g27MonthName(m){return ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'][Number(m)-1]||String(m)}
+async function g27LoadMyPayroll(){const card=g27EnsureMyPayroll();if(!card)return;const body=$('g27PayBody');body.innerHTML='<div class="loading">Cargando tus nóminas…</div>';const z=await g27Pay('/worker/list');if(!z.ok){body.innerHTML='<div class="g20-errorbox">'+esc(z.error||'No se pudieron cargar tus nóminas')+'</div>';return}const items=z.items||[];body.innerHTML='<div class="g27-pay-list">'+(items.map(x=>{const signed=!!x.receipt?.signed_at;return '<div class="g27-pay-row"><div class="g27-pay-icon">€</div><div><div class="g27-pay-title">'+esc(g27MonthName(x.payroll_month)+' '+x.payroll_year)+'</div><div class="g27-pay-meta">'+esc(x.original_name||'Nómina PDF')+' · <span class="'+(signed?'g27-signed':'g27-pending')+'">'+(signed?'Firmada':'Pendiente de firma')+'</span></div><div class="g27-pay-actions"><button class="btn secondary" data-g27pay="view" data-id="'+x.id+'">Ver PDF</button><button class="btn secondary" data-g27pay="download" data-id="'+x.id+'">Descargar</button>'+(signed?'<button class="btn secondary" data-g27pay="certificate" data-id="'+x.id+'">Certificado</button>':'')+'</div></div></div>'}).join('')||'<div class="g27-empty">Todavía no tienes nóminas personales publicadas.</div>')+'</div>';$$('[data-g27pay]').forEach(b=>b.onclick=()=>g27OpenPayroll(b.dataset.id,b.dataset.g27pay))}
+async function g27OpenPayroll(id,mode){const cert=mode==='certificate',download=mode==='download',z=await g27Pay(cert?'/worker/certificate-url':'/worker/url',{document_id:id,download});if(!z.ok||!z.url)return alert(z.error||'No se pudo abrir el documento');window.location.href=z.url}
+
+function g27LabelAccountingTables(root){if(!root)return;root.querySelectorAll('table').forEach(t=>{const heads=[...t.querySelectorAll('thead th')].map(h=>(h.textContent||'').trim());if(!heads.length)return;t.classList.add('g27-mobile-table');t.querySelectorAll('tbody tr').forEach(tr=>{[...tr.children].forEach((td,i)=>{if(td.tagName==='TD'&&!td.dataset.label)td.dataset.label=heads[i]||''})})});root.querySelectorAll('*').forEach(el=>{try{if(el!==root&&el.scrollWidth>el.clientWidth+10)el.classList.add('g27-no-x')}catch(e){}})}
+function g27OptimizeAccounting(){const root=$('accounting');if(!root)return;g27LabelAccountingTables(root);if(!g27AccObserver){g27AccObserver=new MutationObserver(()=>{clearTimeout(g27AccTimer);g27AccTimer=setTimeout(()=>g27LabelAccountingTables(root),90)});g27AccObserver.observe(root,{childList:true,subtree:true})}}
+
+$('g20RefreshPunch')?.addEventListener('click',()=>setTimeout(g27LoadMyPunches,70));
+$('g26RefreshOwn')?.addEventListener('click',()=>setTimeout(g27LoadMyPunches,70));
+'''
+boot='boot();\n})();'
+if boot not in s: raise SystemExit('No se encontró boot final')
+if 'Admin v2.7 · personal' not in s:s=s.replace(boot,js+'\n'+boot,1)
+
+p.write_text(s,encoding='utf-8')
+print('v2.7 patched',len(s))
