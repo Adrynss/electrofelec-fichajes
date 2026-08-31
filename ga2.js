@@ -31,9 +31,9 @@ const scripts=[
  ['gestor-accounting-v194-import-stability.js',3],
  ['gestor-accounting-v195-order-only-cancel.js',5],
  ['gestor-accounting-v196-invoice-status-pdf.js',2],
- ['gestor-accounting-v197-ignore-invoice-toolbar-cleanup.js',2],
- ['gestor-fichajes-today-v201.js',1]
+ ['gestor-accounting-v197-ignore-invoice-toolbar-cleanup.js',2]
 ];
 for(let [file,ver] of scripts)await load(file,ver);
+try{let ft=await fetch('https://raw.githubusercontent.com/Adrynss/electrofelec-fichajes/main/gestor-fichajes-today-v201.js?v=2',{cache:'no-store'});if(ft.ok)(0,eval)(await ft.text());else console.warn('No se pudo cargar fichajes de hoy',ft.status)}catch(e){console.warn('Fichajes de hoy',e)}
 console.info('Contabilidad Electrofelec cargada · bundle consolidado');
 })();
