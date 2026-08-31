@@ -35,7 +35,7 @@ const scripts=[
  ['gestor-accounting-v202-cloud-sync.js',1]
 ];
 for(let [file,ver] of scripts)await load(file,ver);
-try{let prl=await fetch('https://raw.githubusercontent.com/Adrynss/electrofelec-fichajes/main/gestor-cae-v203-prl-order.js?v=2',{cache:'no-store'});if(prl.ok)(0,eval)(await prl.text());else console.warn('No se pudo cargar orden PRL',prl.status)}catch(e){console.warn('Orden PRL',e)}
+try{let prl=await fetch('https://raw.githubusercontent.com/Adrynss/electrofelec-fichajes/main/gestor-cae-v203-prl-order.js?v=4',{cache:'no-store'});if(prl.ok)(0,eval)(await prl.text());else console.warn('No se pudo cargar orden PRL',prl.status)}catch(e){console.warn('Orden PRL',e)}
 try{let ft=await fetch('https://raw.githubusercontent.com/Adrynss/electrofelec-fichajes/main/gestor-fichajes-today-v201.js?v=7',{cache:'no-store'});if(ft.ok)(0,eval)(await ft.text());else console.warn('No se pudo cargar fichajes de hoy',ft.status)}catch(e){console.warn('Fichajes de hoy',e)}
 console.info('Contabilidad Electrofelec cargada · bundle consolidado');
 })();
