@@ -1,6 +1,7 @@
 (()=>{
 'use strict';
-if(typeof window.DK==='undefined') return;
+const getKey=()=>{try{if(typeof DK!=='undefined'&&DK)return DK}catch(e){}return window.DK||''};
+if(!getKey()) return;
 if(window.__efCaeEmployeeCardsV206) return;
 window.__efCaeEmployeeCardsV206=true;
 
@@ -90,7 +91,7 @@ async function savePhoto(name,p,t,old,b){
   if(file.size>12*1024*1024)return alert('La foto no puede superar 12 MB.');
   b.disabled=true;b.textContent='Guardando…';
   try{
-    const fd=new FormData();fd.append('p_key',window.DK);fd.append('file',file);fd.append('scope','employee');fd.append('employee_id',p.id);fd.append('document_type_id',String(t.id));fd.append('notes','Foto del trabajador');if(old?.file_id)fd.append('replace_id',old.file_id);
+    const fd=new FormData();fd.append('p_key',getKey());fd.append('file',file);fd.append('scope','employee');fd.append('employee_id',p.id);fd.append('document_type_id',String(t.id));fd.append('notes','Foto del trabajador');if(old?.file_id)fd.append('replace_id',old.file_id);
     const r=await fetch(docsBase()+'/upload',{method:'POST',body:fd});const z=await r.json().catch(()=>({ok:false,error:'Respuesta no válida'}));if(!r.ok||!z.ok)throw Error(z.error||'No se pudo guardar la foto');
     try{if(typeof closeModal==='function')closeModal();else if(typeof window.closeModal==='function')window.closeModal()}catch(e){}
     try{if(typeof driveSyncNow==='function')driveSyncNow();else if(typeof window.driveSyncNow==='function')window.driveSyncNow()}catch(e){}
