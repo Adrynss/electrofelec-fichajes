@@ -27,7 +27,7 @@ const scripts=[
  ['gestor-accounting-v190-editor-layout.js',1],
  ['gestor-accounting-v192-editor-links-stable.js',2],
  ['gestor-accounting-v193-editor-units.js',1],
- ['gestor-accounting-v193-invoice-row-hover.js',3],
+ ['gestor-accounting-v193-invoice-row-hover.js',4],
  ['gestor-accounting-v194-import-stability.js',3],
  ['gestor-accounting-v195-order-only-cancel.js',5],
  ['gestor-accounting-v196-invoice-status-pdf.js',2],
