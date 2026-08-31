@@ -1,8 +1,8 @@
 (function(){
 'use strict';
-if(window.__efGestorFichajesTodayV201)return;window.__efGestorFichajesTodayV201=true;
+if(window.__efGestorFichajesTodayV202)return;window.__efGestorFichajesTodayV202=true;
 const TS='https://kbdmraxjfgtttopsyfuy.supabase.co/functions/v1/electrofelec-desktop-time';
-let busy=false,lastSig='',hooked=false;
+let busy=false,lastSig='',hooked=false,wasVisible=false;
 const E=s=>typeof esc==='function'?esc(String(s??'')):String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 function madridParts(v){try{let a=new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/Madrid',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(v instanceof Date?v:new Date(v)),o={};for(let p of a)o[p.type]=p.value;return o.year+'-'+o.month+'-'+o.day}catch(e){return''}}
 function today(){return madridParts(new Date())}
@@ -25,6 +25,7 @@ function draw(d,force=false){css();let card=host();if(!card)return;let sig=JSON.
 function errorCard(msg){css();let card=host();if(!card)return;card.innerHTML=`<div class="efp-head"><div><h3>Quién ha fichado hoy</h3><div class="muted small">No se pudo actualizar ahora mismo.</div></div><button class="btn" onclick="efRefreshTodayPunches(this)">↻ Reintentar</button></div><div class="notice">${E(msg||'Error de conexión')}</div>`}
 async function refresh(btn){if(busy||!visible())return;busy=true;let b=btn&&btn.nodeType===1?btn:null,old=b?.textContent;if(b){b.disabled=true;b.textContent='Actualizando…'}let ctl=new AbortController(),to=setTimeout(()=>ctl.abort(),8000);try{if(typeof DK==='undefined'||!DK)throw Error('No está disponible la clave del Gestor');let date=today(),r=await fetch(TS+'/list',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({p_key:DK,year:+date.slice(0,4),start_date:date,end_date:date}),cache:'no-store',signal:ctl.signal}),z=await r.json().catch(()=>({ok:false,error:'Respuesta no válida'}));if(!r.ok||!z.ok)throw Error(z.error||'No se pudieron leer los fichajes');draw(classify(z),!!b)}catch(e){if(b)errorCard(e.name==='AbortError'?'Supabase ha tardado demasiado':e.message||String(e));else console.warn('Fichajes de hoy',e)}finally{clearTimeout(to);busy=false;if(b&&document.body.contains(b)){b.disabled=false;b.textContent=old||'↻ Actualizar'}}}
 window.efRefreshTodayPunches=refresh;
-function hook(){if(!hooked&&typeof window.renderHours==='function'&&!window.renderHours.__efToday201){let old=window.renderHours,fn=function(){let r=old.apply(this,arguments);setTimeout(()=>refresh(),60);return r};fn.__efToday201=true;window.renderHours=fn;try{renderHours=fn}catch(e){}hooked=true}if(visible())refresh()}
-setTimeout(hook,700);setTimeout(hook,1800);setInterval(()=>{if(visible())refresh()},60000);
+function installHook(){if(hooked||typeof window.renderHours!=='function'||window.renderHours.__efToday202)return;let old=window.renderHours,fn=function(){let r=old.apply(this,arguments);setTimeout(()=>refresh(),80);return r};fn.__efToday202=true;window.renderHours=fn;try{renderHours=fn}catch(e){}hooked=true}
+function bootCheck(){installHook();let v=visible();if(v&&!wasVisible){lastSig='';setTimeout(()=>refresh(),80)}wasVisible=v}
+setTimeout(bootCheck,500);setTimeout(bootCheck,1200);setInterval(bootCheck,1000);setInterval(()=>{if(visible())refresh()},60000);
 })();
