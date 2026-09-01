@@ -47,6 +47,7 @@ jobs:
           python android-admin/patch_v28.py
           python android-admin/patch_v29.py
           python android-admin/patch_v210.py
+          python android-admin/patch_v210_fix.py
           test -s android-admin/src/main/assets/index.html
           python - <<'PY'
           from pathlib import Path
