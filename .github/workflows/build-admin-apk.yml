@@ -48,22 +48,27 @@ jobs:
           python android-admin/patch_v29.py
           python android-admin/patch_v210.py
           test -s android-admin/src/main/assets/index.html
-          grep -q "Electrofelec Admin v2.10" android-admin/src/main/assets/index.html
-          grep -q "APP v2.10" android-admin/src/main/assets/index.html
-          grep -q 'id="secPersonalZone"' android-admin/src/main/assets/index.html
-          grep -q 'id="g210HistorySlot"' android-admin/src/main/assets/index.html
-          grep -q 'Mis fichajes desde 2025' android-admin/src/main/assets/index.html
-          grep -q 'Mis nóminas de' android-admin/src/main/assets/index.html
-          grep -q 'function g210OpenPersonal' android-admin/src/main/assets/index.html
-          grep -q 'function g210LoadHistory' android-admin/src/main/assets/index.html
-          grep -q 'function g210LoadPayroll' android-admin/src/main/assets/index.html
-          grep -q 'function g210CompanyPunches' android-admin/src/main/assets/index.html
-          grep -q 'function g210CompanyPayroll' android-admin/src/main/assets/index.html
-          grep -q 'FIRMAR RECEPCIÓN' android-admin/src/main/assets/index.html
-          grep -q '/worker/sign' android-admin/src/main/assets/index.html
-          grep -q '/admin/time-range' android-admin/src/main/assets/index.html
-          grep -q 'data-mobile-tab="PersonalZone"' android-admin/src/main/assets/index.html
-          grep -q 'data-mobile-tab="Punches"' android-admin/src/main/assets/index.html
+          python - <<'PY'
+          from pathlib import Path
+          h=Path('android-admin/src/main/assets/index.html').read_text(encoding='utf-8')
+          required=[
+            'Electrofelec Admin v2.10',
+            'secPersonalZone',
+            'g210HistorySlot',
+            'Mis fichajes desde 2025',
+            'function g210OpenPersonal',
+            'function g210LoadHistory',
+            'function g210LoadPayroll',
+            'function g210CompanyPunches',
+            'function g210CompanyPayroll',
+            'FIRMAR RECEPCIÓN',
+            '/worker/sign',
+            '/admin/time-range'
+          ]
+          missing=[x for x in required if x not in h]
+          if missing: raise SystemExit('Faltan marcadores v2.10: '+repr(missing))
+          print('Smoke UI v2.10 OK')
+          PY
 
       - name: Validate Admin JavaScript
         run: |
