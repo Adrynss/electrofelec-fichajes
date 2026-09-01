@@ -34,7 +34,7 @@ jobs:
         with:
           gradle-version: '8.10.2'
 
-      - name: Prepare Gestor completo mobile UI v2.8
+      - name: Prepare Gestor completo mobile UI v2.9
         run: |
           mkdir -p android-admin/src/main/assets
           cat android-admin/ui/v13gz_*.part > /tmp/admin_v13.gz.b64
@@ -45,11 +45,17 @@ jobs:
           python android-admin/patch_v26.py
           python android-admin/patch_v27.py
           python android-admin/patch_v28.py
+          python android-admin/patch_v29.py
           test -s android-admin/src/main/assets/index.html
-          grep -q "Electrofelec Admin v2.8" android-admin/src/main/assets/index.html
-          grep -q "APP v2.8" android-admin/src/main/assets/index.html
+          grep -q "Electrofelec Admin v2.9" android-admin/src/main/assets/index.html
+          grep -q "APP v2.9" android-admin/src/main/assets/index.html
+          grep -q 'id="secPersonalZone"' android-admin/src/main/assets/index.html
+          grep -q 'data-tab="PersonalZone"' android-admin/src/main/assets/index.html
+          grep -q 'data-mobile-tab="PersonalZone"' android-admin/src/main/assets/index.html
+          grep -q 'id="g29PunchSlot"' android-admin/src/main/assets/index.html
+          grep -q 'id="g29PayrollSlot"' android-admin/src/main/assets/index.html
+          grep -q 'function g29OpenPersonal' android-admin/src/main/assets/index.html
           grep -q 'id="g26OwnPunch"' android-admin/src/main/assets/index.html
-          grep -q 'Mis fichajes' android-admin/src/main/assets/index.html
           grep -q 'Mis nóminas' android-admin/src/main/assets/index.html
           grep -q 'Nóminas y firmas' android-admin/src/main/assets/index.html
           grep -q 'FIRMAR RECEPCIÓN' android-admin/src/main/assets/index.html
@@ -90,17 +96,17 @@ jobs:
         run: |
           "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose android-admin/build/outputs/apk/debug/android-admin-debug.apk
           "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging android-admin/build/outputs/apk/debug/android-admin-debug.apk | tee /tmp/badging.txt
-          grep -q "versionCode='14'" /tmp/badging.txt
-          grep -q "versionName='2.8-admin'" /tmp/badging.txt
+          grep -q "versionCode='15'" /tmp/badging.txt
+          grep -q "versionName='2.9-admin'" /tmp/badging.txt
 
       - name: Prepare artifact
         run: |
-          cp android-admin/build/outputs/apk/debug/android-admin-debug.apk Electrofelec_Admin_v2_8_NOMINAS_FIRMAS.apk
-          test -s Electrofelec_Admin_v2_8_NOMINAS_FIRMAS.apk
+          cp android-admin/build/outputs/apk/debug/android-admin-debug.apk Electrofelec_Admin_v2_9_MI_ZONA.apk
+          test -s Electrofelec_Admin_v2_9_MI_ZONA.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: Electrofelec_Admin_v2_8_NOMINAS_FIRMAS
-          path: Electrofelec_Admin_v2_8_NOMINAS_FIRMAS.apk
+          name: Electrofelec_Admin_v2_9_MI_ZONA
+          path: Electrofelec_Admin_v2_9_MI_ZONA.apk
           if-no-files-found: error
