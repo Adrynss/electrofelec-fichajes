@@ -1,7 +1,8 @@
-name: Temporary Wood Rift APK build
+name: Wood Rift 2.2.4 build
 on:
   push:
-    branches: [ woodrift-v224-fix-20260902 ]
+    branches:
+      - woodrift-v224-fix-20260902
 permissions:
   contents: read
 jobs:
@@ -11,85 +12,13 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: Restore Wood Rift 2.2.3 base
+      - name: Restore 2.2.3 source
         run: |
           git show 467b5a168a1953ab9b022b8c17246d5cc7b78020:woodrift-v220-mockup-patch.tgz.b64 > /tmp/v223.b64
-          python3 - <<'PY'
-          import base64, re
-          text=open('/tmp/v223.b64','r',encoding='utf-8').read()
-          text=''.join(re.findall(r'[A-Za-z0-9+/=]', text))
-          open('/tmp/v223.tgz','wb').write(base64.b64decode(text))
-          PY
+          tr -cd 'A-Za-z0-9+/=' < /tmp/v223.b64 | base64 -d > /tmp/v223.tgz
           tar -xzf /tmp/v223.tgz
-      - name: Apply 2.2.4 centering and score fixes
-        run: |
-          python3 - <<'PY'
-          from pathlib import Path
-          import re
-
-          eng=Path('woodrift-game/app/src/main/java/com/woodrift/game/GameEngine.java')
-          s=eng.read_text()
-          old='''        for(int[] b:cells(type,rot)){
-            int x=px+b[0], y=py+b[1];
-            if(y<0){gameOver=true;return EV_GAMEOVER;}
-            if(x>=0&&x<COLS&&y<ROWS) board[y][x]=type+1;
-        }
-        clearingRows.clear();'''
-          new='''        for(int[] b:cells(type,rot)){
-            int x=px+b[0], y=py+b[1];
-            if(y<0){gameOver=true;return EV_GAMEOVER;}
-            if(x>=0&&x<COLS&&y<ROWS) board[y][x]=type+1;
-        }
-        // Puntuación de colocación restaurada: cada pieza fijada suma 4.
-        score += 4;
-        clearingRows.clear();'''
-          if old not in s:
-              raise SystemExit('No se encontró el bloque de lock para corregir puntuación')
-          s=s.replace(old,new,1)
-          eng.write_text(s)
-
-          view=Path('woodrift-game/app/src/main/java/com/woodrift/game/GameView.java')
-          s=view.read_text()
-          method='''    private void layoutControls(){
-        float dw=deckRect.width(), dh=deckRect.height();
-        float controlCy=deckRect.centerY()-dh*.025f;
-
-        // Cruceta centrada en el bloque izquierdo.
-        float dpadSize=Math.min(dw*.34f,dh*.64f);
-        float cx=deckRect.left+dw*.245f;
-        float cy=controlCy;
-        float dx=cx-dpadSize/2f, dy=cy-dpadSize/2f;
-        float thick=dpadSize*.34f, half=thick/2f;
-        dCenter.set(cx-half,cy-half,cx+half,cy+half);
-        dUp.set(cx-half,dy,cx+half,cy-half*.45f);
-        dDown.set(cx-half,cy+half*.45f,cx+half,dy+dpadSize);
-        dLeft.set(dx,cy-half,cx-half*.45f,cy+half);
-        dRight.set(cx+half*.45f,cy-half,dx+dpadSize,cy+half);
-
-        // A y B en la misma línea y el grupo centrado en el bloque derecho.
-        float r=Math.min(dh*.175f,dw*.092f);
-        float groupCx=deckRect.left+dw*.735f;
-        float gap=r*.62f;
-        float ax=groupCx-r-gap/2f;
-        float bx=groupCx+r+gap/2f;
-        float by=controlCy;
-        aButton.set(ax-r,by-r,ax+r,by+r);
-        bButton.set(bx-r,by-r,bx+r,by+r);
-    }
-'''
-          s,n=re.subn(r'    private void layoutControls\(\)\{.*?\n    \}\n\n    @Override protected void onDraw', method+'\n    @Override protected void onDraw', s, count=1, flags=re.S)
-          if n!=1:
-              raise SystemExit('No se pudo reemplazar layoutControls')
-          s=s.replace('p.setTextSize(Math.max(10,rr.width()*.13f));p.setColor(0xff34343a);c.drawText(label,rr.centerX(),rr.bottom+rr.height()*.25f,p);',
-                      'p.setTextSize(Math.max(10,rr.width()*.13f));p.setColor(0xffeef5fb);c.drawText(label,rr.centerX(),rr.bottom+rr.height()*.25f,p);')
-          view.write_text(s)
-
-          gradle=Path('woodrift-game/app/build.gradle')
-          s=gradle.read_text()
-          s=re.sub(r'versionCode\s+\d+', 'versionCode 13', s)
-          s=re.sub(r"versionName\s+'[^']+'", "versionName '2.2.4'", s)
-          gradle.write_text(s)
-          PY
+      - name: Apply 2.2.4 fixes
+        run: python3 wr224_fix.py
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -99,12 +28,12 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.9'
-      - name: Build Wood Rift
+      - name: Build APK
         run: cd woodrift-game && gradle assembleDebug
-      - name: Verify APK and manifest
+      - name: Verify APK
         run: |
           "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose woodrift-game/app/build/outputs/apk/debug/app-debug.apk
-          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging woodrift-game/app/build/outputs/apk/debug/app-debug.apk | tee /tmp/badging.txt
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging woodrift-game/app/build/outputs/apk/debug/app-debug.apk > /tmp/badging.txt
           grep -q "package: name='com.woodrift.game'" /tmp/badging.txt
           grep -q "versionName='2.2.4'" /tmp/badging.txt
           grep -q "launchable-activity: name='com.woodrift.game.MainActivity'" /tmp/badging.txt
