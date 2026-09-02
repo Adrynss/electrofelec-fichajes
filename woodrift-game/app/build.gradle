@@ -1,0 +1,12 @@
+plugins { id 'com.android.application' }
+android {
+    namespace 'com.woodrift.game'
+    compileSdk 35
+    defaultConfig {
+        applicationId 'com.woodrift.game'
+        minSdk 24
+        targetSdk 35
+        versionCode 3
+        versionName '2.0.0'
+    }
+}
