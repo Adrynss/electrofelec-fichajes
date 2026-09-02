@@ -1,7 +1,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <application
         android:allowBackup="true"
-        android:label="Wood Rift"
+        android:label="Neon Rift"
         android:theme="@style/AppTheme"
         android:icon="@drawable/ic_launcher">
         <activity
