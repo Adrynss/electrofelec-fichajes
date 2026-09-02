@@ -2,6 +2,18 @@
 'use strict';
 const base='https://adrynss.github.io/electrofelec-fichajes/';
 async function load(file,ver){try{let r=await fetch(base+file+'?v='+ver,{cache:'no-store'});if(!r.ok){console.warn('No se pudo cargar',file,r.status);return false}(0,eval)(await r.text());return true}catch(e){console.warn('Error cargando '+file,e);return false}}
+function stabilizeAccountingImportHooks(){
+ try{
+  let s=window.acSavePdfBatch;
+  if(typeof s==='function'){
+   s.__v160=true;s.__v161=true;s.__v162=true;s.__v194=true;s.__v208=true;
+  }
+  let p=window.acPdfBatchSelected;
+  if(typeof p==='function'){
+   p.__v160=true;p.__v161=true;p.__v162=true;p.__v208Capture=true;
+  }
+ }catch(e){console.warn('Protección importación contabilidad',e)}
+}
 const scripts=[
  ['gestor-accounting-ui.js',3],
  ['gestor-accounting-batch-ui.js',1],
@@ -33,9 +45,11 @@ const scripts=[
  ['gestor-accounting-v196-invoice-status-pdf.js',2],
  ['gestor-accounting-v197-ignore-invoice-toolbar-cleanup.js',2],
  ['gestor-accounting-v202-cloud-sync.js',1],
- ['gestor-accounting-v208-import-stable.js',1]
+ ['gestor-accounting-v208-import-stable.js',2]
 ];
 for(let [file,ver] of scripts)await load(file,ver);
+stabilizeAccountingImportHooks();
+setTimeout(stabilizeAccountingImportHooks,1000);
 try{let prl=await fetch('https://raw.githubusercontent.com/Adrynss/electrofelec-fichajes/main/gestor-cae-v203-prl-order.js?v=4',{cache:'no-store'});if(prl.ok)(0,eval)(await prl.text());else console.warn('No se pudo cargar orden PRL',prl.status)}catch(e){console.warn('Orden PRL',e)}
 try{let cards=await fetch('https://raw.githubusercontent.com/Adrynss/electrofelec-fichajes/main/gestor-cae-v205-employee-cards.js?v=2',{cache:'no-store'});if(cards.ok)(0,eval)(await cards.text());else console.warn('No se pudieron cargar tarjetas CAE',cards.status)}catch(e){console.warn('Tarjetas CAE',e)}
 try{let ft=await fetch('https://raw.githubusercontent.com/Adrynss/electrofelec-fichajes/main/gestor-fichajes-today-v201.js?v=7',{cache:'no-store'});if(ft.ok)(0,eval)(await ft.text());else console.warn('No se pudo cargar fichajes de hoy',ft.status)}catch(e){console.warn('Fichajes de hoy',e)}
