@@ -11,9 +11,114 @@ jobs:
       - uses: actions/checkout@v4
       - name: Apply Retro Rift 2.2.6 patch
         run: |
-          cat retrorift-v226.part00 > /tmp/retrorift-v226.b64
-          base64 -d /tmp/retrorift-v226.b64 > /tmp/retrorift-v226.tgz
-          tar -xzf /tmp/retrorift-v226.tgz
+          cat retrorift-v225.part00 retrorift-v225.part01 retrorift-v225.part02 retrorift-v225.part03 retrorift-v225.part04 > /tmp/retrorift-v225.b64
+          base64 -d /tmp/retrorift-v225.b64 > /tmp/retrorift-v225.tgz
+          tar -xzf /tmp/retrorift-v225.tgz
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('woodrift-game/app/src/main/java/com/woodrift/game/GameView.java')
+          s=p.read_text()
+          s=s.replace('private final RectF boardRect=new RectF(), panelRect=new RectF(), deckRect=new RectF(), themeButton=new RectF();',
+                      'private final RectF boardRect=new RectF(), panelRect=new RectF(), deckRect=new RectF(), themeButton=new RectF(), exitButton=new RectF(), recordCard=new RectF();')
+          a=s.index('    @Override protected void onSizeChanged')
+          b=s.index('    private void layoutControls()', a)
+          s=s[:a]+'''    @Override protected void onSizeChanged(int w,int hgt,int ow,int oh){
+              float outer=w*.018f;
+              headerTop=Math.max(safeInsetTop+22,hgt*.030f);
+              float headerH=Math.max(138,hgt*.092f);
+              float deckH=Math.max(270,hgt*.255f);
+              float deckGap=Math.max(14,hgt*.010f);
+              float panelGap=Math.max(10,w*.012f);
+              float panelW=Math.max(155,w*.225f);
+              float usableW=w-outer*2-panelGap-panelW;
+              float usableH=hgt-(headerTop+headerH)-deckH-deckGap-outer;
+              cell=Math.min(usableW/GameEngine.COLS, usableH/GameEngine.ROWS);
+              left=outer;
+              top=headerTop+headerH;
+              float bw=GameEngine.COLS*cell,bh=GameEngine.ROWS*cell;
+              boardBottom=top+bh;
+              boardRect.set(left,top,left+bw,boardBottom);
+              panelRect.set(boardRect.right+panelGap,top,w-outer,boardBottom);
+              float deckTop=boardBottom+deckGap;
+              deckRect.set(outer,deckTop,w-outer,hgt-outer);
+              float right=w*.965f;
+              float rightGroupLeft=w*.645f;
+              float recordH=Math.max(38,hgt*.027f);
+              recordCard.set(rightGroupLeft,headerTop+4,right,headerTop+4+recordH);
+              float rowTop=recordCard.bottom+12;
+              float rowH=Math.max(48,hgt*.034f);
+              float gap=Math.max(10,w*.014f);
+              float exitW=Math.max(86,w*.115f);
+              exitButton.set(right-exitW,rowTop,right,rowTop+rowH);
+              themeButton.set(rightGroupLeft,rowTop,exitButton.left-gap,rowTop+rowH);
+              layoutControls();
+          }
+
+          '''+s[b:]
+          a=s.index('    private void drawHeader(Canvas c){')
+          b=s.index('    private void drawBoard(Canvas c){', a)
+          s=s[:a]+'''    private void drawHeader(Canvas c){
+              int[] t=theme();float w=getWidth();
+              int accent=levelAccent();
+              float titleY=headerTop+43;
+              float subY=headerTop+77;
+              p.setTextAlign(Paint.Align.LEFT);p.setTypeface(Typeface.create(Typeface.DEFAULT,Typeface.BOLD));
+              p.setShadowLayer(5,0,2,0x77000000);p.setColor(0xfff5f8fc);p.setTextSize(Math.max(30,w*.060f));
+              c.drawText("RETRO RIFT",w*.048f,titleY,p);p.clearShadowLayer();
+              p.setTextSize(Math.max(12,w*.026f));p.setColor(light(accent,.38f));
+              c.drawText("A-TYPE  ·  NIVEL "+g.level,w*.050f,subY,p);
+              p.setShader(new LinearGradient(0,recordCard.top,0,recordCard.bottom,new int[]{light(t[1],.22f),dark(t[1],.92f)},null,Shader.TileMode.CLAMP));
+              p.setShadowLayer(7,0,3,0x55000000);c.drawRoundRect(recordCard,17,17,p);p.clearShadowLayer();p.setShader(null);
+              p.setStyle(Paint.Style.STROKE);p.setStrokeWidth(1.7f);p.setColor(0x55ffffff);c.drawRoundRect(recordCard,17,17,p);p.setStyle(Paint.Style.FILL);
+              p.setTextAlign(Paint.Align.CENTER);p.setTypeface(Typeface.DEFAULT_BOLD);p.setTextSize(Math.max(13,recordCard.height()*.34f));p.setColor(0xfff3f6fa);
+              c.drawText("RÉCORD   "+best,recordCard.centerX(),recordCard.centerY()+recordCard.height()*.11f,p);
+              p.setShader(new LinearGradient(0,themeButton.top,0,themeButton.bottom,new int[]{light(t[1],.34f),dark(t[1],.82f)},null,Shader.TileMode.CLAMP));
+              p.setShadowLayer(10,0,5,0x66000000);c.drawRoundRect(themeButton,22,22,p);p.clearShadowLayer();p.setShader(null);
+              p.setStyle(Paint.Style.STROKE);p.setStrokeWidth(2.4f);p.setColor(accent);c.drawRoundRect(themeButton,22,22,p);p.setStyle(Paint.Style.FILL);
+              float dotR=Math.max(5,themeButton.height()*.14f);
+              float dotX=themeButton.left+themeButton.height()*.52f;
+              p.setShadowLayer(5,0,3,0x66000000);p.setColor(accent);c.drawCircle(dotX,themeButton.centerY(),dotR,p);p.clearShadowLayer();
+              p.setTextAlign(Paint.Align.CENTER);p.setTypeface(Typeface.DEFAULT_BOLD);p.setTextSize(Math.max(12,themeButton.height()*.29f));p.setColor(0xfff6f9fc);
+              c.drawText("TEMA  ·  "+THEME_NAMES[themeIndex],themeButton.centerX()+themeButton.width()*.025f,themeButton.centerY()+themeButton.height()*.10f,p);
+              p.setTextAlign(Paint.Align.RIGHT);p.setTextSize(Math.max(16,themeButton.height()*.34f));p.setColor(light(accent,.35f));
+              c.drawText("›",themeButton.right-themeButton.height()*.28f,themeButton.centerY()+themeButton.height()*.12f,p);
+              int exitBase=0xffd94b55;
+              p.setShader(new LinearGradient(0,exitButton.top,0,exitButton.bottom,new int[]{light(exitBase,.24f),dark(exitBase,.80f)},null,Shader.TileMode.CLAMP));
+              p.setShadowLayer(10,0,5,0x66000000);c.drawRoundRect(exitButton,22,22,p);p.clearShadowLayer();p.setShader(null);
+              p.setStyle(Paint.Style.STROKE);p.setStrokeWidth(2.2f);p.setColor(0xffff9aa0);c.drawRoundRect(exitButton,22,22,p);p.setStyle(Paint.Style.FILL);
+              p.setTextAlign(Paint.Align.CENTER);p.setTypeface(Typeface.DEFAULT_BOLD);p.setTextSize(Math.max(12,exitButton.height()*.28f));p.setColor(Color.WHITE);
+              c.drawText("SALIR",exitButton.centerX(),exitButton.centerY()+exitButton.height()*.10f,p);
+          }
+
+          '''+s[b:]
+          s=s.replace('''                if(themeButton.contains(x,y)){
+                    themeIndex=(themeIndex+1)%THEMES.length;''','''                if(exitButton.contains(x,y)){
+                    performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP);
+                    try{
+                        android.app.Activity a=(android.app.Activity)getContext();
+                        if(Build.VERSION.SDK_INT>=21)a.finishAndRemoveTask(); else a.finish();
+                    }catch(Throwable ignored){}
+                    return true;
+                }
+                if(themeButton.contains(x,y)){
+                    themeIndex=(themeIndex+1)%THEMES.length;''')
+          p.write_text(s)
+          p=Path('woodrift-game/app/src/main/java/com/woodrift/game/MainActivity.java')
+          p.write_text(p.read_text().replace('NEON RIFT','RETRO RIFT'))
+          p=Path('woodrift-game/app/build.gradle')
+          p.write_text(p.read_text().replace('versionCode 13','versionCode 14').replace("versionName '2.2.5'","versionName '2.2.6'"))
+          PY
+          mkdir -p woodrift-game/app/src/main/res/drawable
+          cat > woodrift-game/app/src/main/res/drawable/ic_launcher.xml <<'XML'
+          <vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="108dp" android:height="108dp" android:viewportWidth="108" android:viewportHeight="108">
+              <path android:fillColor="#142235" android:pathData="M18,8h72a10,10 0 0,1 10,10v72a10,10 0 0,1 -10,10h-72a10,10 0 0,1 -10,-10v-72a10,10 0 0,1 10,-10z"/>
+              <path android:fillColor="#253B52" android:pathData="M22,13h64a8,8 0 0,1 8,8v64a8,8 0 0,1 -8,8h-64a8,8 0 0,1 -8,-8v-64a8,8 0 0,1 8,-8z"/>
+              <path android:fillColor="#45C7F4" android:pathData="M22,25h18v18h-18zM40,25h18v18h-18zM58,25h18v18h-18zM40,43h18v18h-18z"/>
+              <path android:fillColor="#F0649D" android:pathData="M22,61h18v18h-18zM40,61h18v18h-18zM40,79h18v18h-18zM58,79h18v18h-18z"/>
+              <path android:fillColor="#58D5B5" android:pathData="M58,43h18v18h-18zM76,43h18v18h-18zM58,61h18v18h-18zM76,61h18v18h-18z"/>
+              <path android:fillColor="#33FFFFFF" android:pathData="M24,27h50v4h-50zM60,45h32v4h-32z"/>
+          </vector>
+          XML
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
