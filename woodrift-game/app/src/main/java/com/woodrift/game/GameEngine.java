@@ -5,16 +5,19 @@ import java.util.Collections;
 import java.util.Random;
 
 final class GameEngine {
-    static final int COLS = 10, ROWS = 20;
+    static final int COLS = 10, ROWS = 18;
     static final int EV_MOVE=1, EV_ROTATE=2, EV_LOCK=4, EV_CLEAR=8, EV_LEVEL=16, EV_DROP=32, EV_GAMEOVER=64;
     final int[][] board = new int[ROWS][COLS];
     final ArrayList<Integer> clearingRows = new ArrayList<>();
     private final ArrayList<Integer> bag = new ArrayList<>();
     private final Random rnd = new Random();
 
-    int type, nextType, rot, px, py, score, lines, level=1;
+    int type, nextType, rot, px, py, score, lines, level=0;
     boolean gameOver;
     long clearUntil, lastDrop;
+
+    private static final int SOFT_DROP_SCORE = 1;
+    private static final int HARD_DROP_PER_CELL = 1;
 
     private static final int[][][] BASE = {
             {{0,0},{1,0},{2,0},{3,0}},
@@ -28,8 +31,16 @@ final class GameEngine {
 
     void reset(long now) {
         for (int y=0;y<ROWS;y++) for (int x=0;x<COLS;x++) board[y][x]=0;
-        bag.clear(); clearingRows.clear(); score=0; lines=0; level=1; gameOver=false; clearUntil=0;
-        nextType=take(); spawn(); lastDrop=now;
+        bag.clear();
+        clearingRows.clear();
+        score=0;
+        lines=0;
+        level=0;
+        gameOver=false;
+        clearUntil=0;
+        nextType=take();
+        spawn();
+        lastDrop=now;
     }
 
     int update(long now) {
@@ -47,7 +58,10 @@ final class GameEngine {
 
     int move(int dx) {
         if (blocked()) return 0;
-        if (!collides(px+dx,py,type,rot)) { px+=dx; return EV_MOVE; }
+        if (!collides(px+dx,py,type,rot)) {
+            px+=dx;
+            return EV_MOVE;
+        }
         return 0;
     }
 
@@ -66,12 +80,16 @@ final class GameEngine {
         if (blocked()) return 0;
         int d=0;
         while(!collides(px,py+1,type,rot)){py++;d++;}
-        score+=d*2;
+        score+=d*HARD_DROP_PER_CELL;
         return EV_DROP | lock(now);
     }
 
     private int down(boolean manual,long now) {
-        if(!collides(px,py+1,type,rot)){py++;if(manual)score++;return 0;}
+        if(!collides(px,py+1,type,rot)){
+            py++;
+            if(manual) score+=SOFT_DROP_SCORE;
+            return 0;
+        }
         return lock(now);
     }
 
@@ -81,6 +99,7 @@ final class GameEngine {
             if(y<0){gameOver=true;return EV_GAMEOVER;}
             if(x>=0&&x<COLS&&y<ROWS) board[y][x]=type+1;
         }
+
         clearingRows.clear();
         for(int y=0;y<ROWS;y++){
             boolean full=true;
@@ -109,25 +128,30 @@ final class GameEngine {
         while(write>=0){for(int x=0;x<COLS;x++)board[write][x]=0;write--;}
         int old=level;
         int[] pts={0,40,100,300,1200};
-        score+=pts[Math.min(4,count)]*level;
+        score+=pts[Math.min(4,count)]*(level+1);
         lines+=count;
-        level=1+lines/10;
-        clearingRows.clear(); clearUntil=0;
+        level=Math.min(20, lines/10);
+        clearingRows.clear();
+        clearUntil=0;
         int ev=0;
-        if(level>old)ev|=EV_LEVEL;
+        if(level>old) ev|=EV_LEVEL;
         if(!spawn()){gameOver=true;ev|=EV_GAMEOVER;}
         lastDrop=now;
         return ev;
     }
 
     private boolean spawn() {
-        type=nextType; nextType=take(); rot=0; px=3; py=0;
+        type=nextType;
+        nextType=take();
+        rot=0;
+        px=3;
+        py=0;
         return !collides(px,py,type,rot);
     }
 
     private int take() {
         if(bag.isEmpty()){
-            for(int i=0;i<7;i++)bag.add(i);
+            for(int i=0;i<7;i++) bag.add(i);
             Collections.shuffle(bag,rnd);
         }
         return bag.remove(0);
@@ -140,8 +164,8 @@ final class GameEngine {
     boolean collides(int x0,int y0,int t,int r){
         for(int[] b:cells(t,r)){
             int x=x0+b[0],y=y0+b[1];
-            if(x<0||x>=COLS||y>=ROWS)return true;
-            if(y>=0&&board[y][x]!=0)return true;
+            if(x<0||x>=COLS||y>=ROWS) return true;
+            if(y>=0&&board[y][x]!=0) return true;
         }
         return false;
     }
@@ -159,8 +183,12 @@ final class GameEngine {
         return out;
     }
 
+    int linesToNextLevel(){
+        return 10 - (lines % 10 == 0 ? 0 : lines % 10);
+    }
+
     private int speed(int lvl){
-        int[] s={800,715,630,550,465,380,300,220,165,130,110,95,80,68,58,50,44,38,33,29,25};
-        return s[Math.max(0,Math.min(s.length-1,lvl-1))];
+        int[] s={887,820,753,686,619,552,469,368,285,184,167,151,134,117,100,100,84,84,67,67,50};
+        return s[Math.max(0,Math.min(s.length-1,lvl))];
     }
 }
