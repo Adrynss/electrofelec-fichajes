@@ -17,7 +17,6 @@ final class GameEngine {
     long clearUntil, lastDrop;
 
     private static final int SOFT_DROP_SCORE = 1;
-    private static final int HARD_DROP_PER_CELL = 1;
 
     private static final int[][][] BASE = {
             {{0,0},{1,0},{2,0},{3,0}},
@@ -76,19 +75,11 @@ final class GameEngine {
 
     int softDrop(long now) { return blocked()?0:down(true,now); }
 
-    int hardDrop(long now) {
-        if (blocked()) return 0;
-        int d=0;
-        while(!collides(px,py+1,type,rot)){py++;d++;}
-        score+=d*HARD_DROP_PER_CELL;
-        return EV_DROP | lock(now);
-    }
-
     private int down(boolean manual,long now) {
         if(!collides(px,py+1,type,rot)){
             py++;
             if(manual) score+=SOFT_DROP_SCORE;
-            return 0;
+            return manual ? EV_DROP : 0;
         }
         return lock(now);
     }
@@ -111,7 +102,7 @@ final class GameEngine {
             lastDrop=now;
             return EV_LOCK;
         }
-        clearUntil=now+260;
+        clearUntil=now+250;
         return EV_LOCK|EV_CLEAR;
     }
 
@@ -184,11 +175,14 @@ final class GameEngine {
     }
 
     int linesToNextLevel(){
-        return 10 - (lines % 10 == 0 ? 0 : lines % 10);
+        int r=lines%10;
+        return r==0?10:10-r;
     }
 
+    int dropIntervalMs(){ return speed(level); }
+
     private int speed(int lvl){
-        int[] s={887,820,753,686,619,552,469,368,285,184,167,151,134,117,100,100,84,84,67,67,50};
+        int[] s={900,720,575,460,370,300,245,200,165,140,120,105,92,80,70,62,55,50,46,42,38};
         return s[Math.max(0,Math.min(s.length-1,lvl))];
     }
 }
