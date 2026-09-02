@@ -20,11 +20,14 @@ jobs:
           gradle-version: '8.9'
       - name: Build Wood Rift
         run: cd woodrift-game && gradle assembleDebug
-      - name: Verify and name APK
+      - name: Verify APK and manifest
         run: |
           "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose woodrift-game/app/build/outputs/apk/debug/app-debug.apk
-          cp woodrift-game/app/build/outputs/apk/debug/app-debug.apk WoodRift_v2_0.apk
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging woodrift-game/app/build/outputs/apk/debug/app-debug.apk | tee /tmp/badging.txt
+          grep -q "package: name='com.woodrift.game'" /tmp/badging.txt
+          grep -q "launchable-activity: name='com.woodrift.game.MainActivity'" /tmp/badging.txt
+          cp woodrift-game/app/build/outputs/apk/debug/app-debug.apk WoodRift_v2_0_1_FIX.apk
       - uses: actions/upload-artifact@v4
         with:
-          name: WoodRift_v2_0_APK
-          path: WoodRift_v2_0.apk
+          name: WoodRift_v2_0_1_FIX_APK
+          path: WoodRift_v2_0_1_FIX.apk
