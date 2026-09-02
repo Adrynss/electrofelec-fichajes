@@ -11,7 +11,12 @@ jobs:
       - uses: actions/checkout@v4
       - name: Apply mockup-approved Wood Rift UI
         run: |
-          base64 -d woodrift-v220-mockup-patch.tgz.b64 > /tmp/woodrift-v220.tgz
+          python3 - <<'PY'
+          import base64, re
+          text=open('woodrift-v220-mockup-patch.tgz.b64','r',encoding='utf-8').read()
+          text=''.join(re.findall(r'[A-Za-z0-9+/=]', text))
+          open('/tmp/woodrift-v220.tgz','wb').write(base64.b64decode(text))
+          PY
           tar -xzf /tmp/woodrift-v220.tgz
       - uses: actions/setup-java@v4
         with:
