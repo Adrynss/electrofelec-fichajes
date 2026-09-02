@@ -3,23 +3,14 @@ import re
 
 engine = Path('woodrift-game/app/src/main/java/com/woodrift/game/GameEngine.java')
 s = engine.read_text()
-old = '''        for(int[] b:cells(type,rot)){
-            int x=px+b[0], y=py+b[1];
-            if(y<0){gameOver=true;return EV_GAMEOVER;}
-            if(x>=0&&x<COLS&&y<ROWS) board[y][x]=type+1;
-        }
-        clearingRows.clear();'''
-new = '''        for(int[] b:cells(type,rot)){
-            int x=px+b[0], y=py+b[1];
-            if(y<0){gameOver=true;return EV_GAMEOVER;}
-            if(x>=0&&x<COLS&&y<ROWS) board[y][x]=type+1;
-        }
-        // Restore the scoring behavior agreed for this version.
-        score += 4;
-        clearingRows.clear();'''
-if old not in s:
-    raise SystemExit('GameEngine lock block not found')
-s = s.replace(old, new, 1)
+match = re.search(r'(private int lock\(long now\)\s*\{.*?)(\n\s*clearingRows\.clear\(\);)', s, flags=re.S)
+if not match:
+    raise SystemExit('GameEngine lock method not found')
+prefix = match.group(1)
+# Remove any previous fixed placement bonus inside lock and set it explicitly to +4.
+prefix = re.sub(r'\n\s*score\s*\+=\s*[^;]+;', '', prefix)
+replacement = prefix + '\n        score += 4;' + match.group(2)
+s = s[:match.start()] + replacement + s[match.end():]
 engine.write_text(s)
 
 view = Path('woodrift-game/app/src/main/java/com/woodrift/game/GameView.java')
