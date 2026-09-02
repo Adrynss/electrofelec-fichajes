@@ -8,9 +8,12 @@ import android.media.ToneGenerator;
 import android.os.Handler;
 import android.os.Looper;
 
+/**
+ * Música y efectos independientes: los efectos nunca reinician la música.
+ */
 final class AudioEngine {
     private final Handler h = new Handler(Looper.getMainLooper());
-    private ToneGenerator tone;
+    private ToneGenerator sfx;
     private AudioTrack music;
     private boolean muted;
     private boolean ready;
@@ -18,13 +21,13 @@ final class AudioEngine {
 
     AudioEngine(boolean muted) {
         this.muted = muted;
-        h.postDelayed(this::initSafe, 350);
+        h.postDelayed(this::initSafe, 220);
     }
 
     private void initSafe() {
         if (released || ready) return;
-        try { tone = new ToneGenerator(AudioManager.STREAM_MUSIC, 58); }
-        catch (Throwable ignored) { tone = null; }
+        try { sfx = new ToneGenerator(AudioManager.STREAM_MUSIC, 45); }
+        catch (Throwable ignored) { sfx = null; }
         try { buildMusic(); }
         catch (Throwable ignored) { music = null; }
         ready = true;
@@ -38,7 +41,8 @@ final class AudioEngine {
             if (!m) initSafe();
             return;
         }
-        if (m) pauseMusic(); else startMusic();
+        if (m) pauseMusic();
+        else startMusic();
     }
 
     boolean isMuted() { return muted; }
@@ -49,99 +53,155 @@ final class AudioEngine {
         try {
             if ((ev & GameEngine.EV_GAMEOVER) != 0) {
                 pauseMusic();
-                playTone(ToneGenerator.TONE_CDMA_ABBR_ALERT, 420);
+                tone(ToneGenerator.TONE_CDMA_ABBR_ALERT, 330);
                 return;
             }
             if ((ev & GameEngine.EV_LEVEL) != 0) {
-                seq(new int[]{ToneGenerator.TONE_DTMF_4, ToneGenerator.TONE_DTMF_8, ToneGenerator.TONE_DTMF_A}, new int[]{70,80,150});
+                sequence(new int[]{ToneGenerator.TONE_DTMF_4, ToneGenerator.TONE_DTMF_7, ToneGenerator.TONE_DTMF_9},
+                         new int[]{55,70,120});
                 return;
             }
             if ((ev & GameEngine.EV_CLEAR) != 0) {
-                seq(new int[]{ToneGenerator.TONE_DTMF_2, ToneGenerator.TONE_DTMF_6, ToneGenerator.TONE_DTMF_B}, new int[]{60,70,120});
+                sequence(new int[]{ToneGenerator.TONE_DTMF_2, ToneGenerator.TONE_DTMF_5, ToneGenerator.TONE_DTMF_8},
+                         new int[]{45,55,95});
                 return;
             }
-            if ((ev & GameEngine.EV_DROP) != 0) { playTone(ToneGenerator.TONE_PROP_NACK, 75); return; }
-            if ((ev & GameEngine.EV_ROTATE) != 0) { playTone(ToneGenerator.TONE_DTMF_9, 45); return; }
-            if ((ev & GameEngine.EV_MOVE) != 0) { playTone(ToneGenerator.TONE_DTMF_1, 28); return; }
-            if ((ev & GameEngine.EV_LOCK) != 0) playTone(ToneGenerator.TONE_PROP_BEEP2, 45);
+            if ((ev & GameEngine.EV_ROTATE) != 0) { tone(ToneGenerator.TONE_DTMF_9, 26); return; }
+            if ((ev & GameEngine.EV_MOVE) != 0) { tone(ToneGenerator.TONE_DTMF_1, 16); return; }
+            if ((ev & GameEngine.EV_DROP) != 0) { tone(ToneGenerator.TONE_PROP_BEEP2, 32); return; }
+            if ((ev & GameEngine.EV_LOCK) != 0) tone(ToneGenerator.TONE_PROP_ACK, 25);
         } catch (Throwable ignored) {}
     }
 
     void restart() {
-        if (!muted) { if (!ready) initSafe(); startMusic(); }
+        if (released) return;
+        if (!ready) initSafe();
+        if (!muted) {
+            try {
+                if (music != null) music.setPlaybackHeadPosition(0);
+            } catch (Throwable ignored) {}
+            startMusic();
+        }
     }
 
-    private void playTone(int id, int ms) {
-        try { if (tone != null) tone.startTone(id, ms); } catch (Throwable ignored) {}
+    private void tone(int id, int ms) {
+        try { if (sfx != null) sfx.startTone(id, ms); } catch (Throwable ignored) {}
     }
 
-    private void seq(int[] tones, int[] ms) {
+    private void sequence(int[] tones, int[] ms) {
         int delay = 0;
         for (int i=0; i<tones.length; i++) {
             final int t = tones[i], d = ms[i];
-            h.postDelayed(() -> { if (!muted && !released) playTone(t, d); }, delay);
-            delay += d + 18;
+            h.postDelayed(() -> { if (!muted && !released) tone(t, d); }, delay);
+            delay += d + 12;
         }
     }
 
     private void buildMusic() {
-        final int sr = 16000;
-        int[] midi = {64,67,69,71,69,67,74,71,64,67,69,72,71,69,67,67,62,65,67,69,67,65,72,69,62,65,67,71,69,67,64,64};
-        int beatSamples = (int)(sr * .20f);
-        short[] pcm = new short[midi.length * beatSamples];
-        for (int n=0; n<midi.length; n++) {
-            double f = 440.0 * Math.pow(2.0, (midi[n]-69) / 12.0);
-            double bass = f / 2.0;
-            for (int i=0; i<beatSamples; i++) {
+        final int sr = 22050;
+        final float beatSeconds = 0.19f;
+        final int beat = (int)(sr * beatSeconds);
+
+        int R = -1;
+        int[] lead = {
+            64,67,71,72, 71,67,64,R, 62,64,67,69, 67,64,62,R,
+            64,67,71,74, 72,71,67,R, 69,72,76,74, 72,69,67,R,
+            59,62,64,67, 64,62,59,R, 60,64,67,69, 67,64,60,R,
+            62,65,69,72, 69,65,62,R, 64,67,71,69, 67,64,62,R,
+            64,69,72,76, 74,72,69,R, 67,71,74,79, 76,74,71,R,
+            69,72,76,81, 79,76,72,R, 71,74,79,76, 74,71,69,R,
+            67,64,60,64, 67,69,67,R, 65,62,59,62, 65,67,65,R,
+            64,67,71,69, 67,64,62,R, 60,62,64,67, 64,62,60,R
+        };
+
+        int[] bassPattern = {40,40,43,43,45,45,43,43, 38,38,40,40,43,43,40,40};
+        short[] pcm = new short[lead.length * beat];
+
+        for (int n=0; n<lead.length; n++) {
+            int bassMidi = bassPattern[n % bassPattern.length];
+            double bassF = midiToFreq(bassMidi);
+            double leadF = lead[n] < 0 ? 0 : midiToFreq(lead[n]);
+            int phrase = (n / 16) % 4;
+            double leadGain = new double[]{0.115,0.10,0.125,0.09}[phrase];
+            double bassGain = new double[]{0.045,0.055,0.05,0.06}[phrase];
+
+            for (int i=0; i<beat; i++) {
                 double t = i / (double)sr;
-                double env = Math.min(1.0, i/(sr*.012)) * Math.min(1.0, (beatSamples-i)/(sr*.045));
-                double sq = Math.sin(2*Math.PI*f*t) >= 0 ? 1 : -1;
-                double tri = 2*Math.abs(2*((bass*t)%1)-1)-1;
-                double tick = (i<110 && n%2==0) ? (1.0-i/110.0) * (n%4==0 ? .16 : .08) : 0;
-                pcm[n*beatSamples+i] = (short)(32767*(.115*sq + .055*tri + tick)*env);
+                double attack = Math.min(1.0, i / (sr * 0.012));
+                double release = Math.min(1.0, (beat-i) / (sr * 0.055));
+                double env = attack * release;
+
+                double leadWave = 0;
+                if (leadF > 0) {
+                    double phase = (leadF * t) % 1.0;
+                    leadWave = phase < 0.42 ? 1.0 : -0.72;
+                }
+                double tri = 2.0 * Math.abs(2.0 * ((bassF*t)%1.0) - 1.0) - 1.0;
+                double hat = (i < 75 && n % 4 == 2) ? (1.0 - i/75.0) * 0.025 : 0.0;
+                double kick = (i < 120 && n % 4 == 0) ? (1.0 - i/120.0) * 0.035 : 0.0;
+
+                double sample = (leadGain*leadWave + bassGain*tri + hat + kick) * env;
+                int v = (int)(32767 * sample);
+                if (v > 32767) v = 32767;
+                if (v < -32767) v = -32767;
+                pcm[n*beat+i] = (short)v;
             }
         }
-        AudioAttributes aa = new AudioAttributes.Builder()
+
+        AudioAttributes attrs = new AudioAttributes.Builder()
                 .setUsage(AudioAttributes.USAGE_GAME)
-                .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC).build();
-        AudioFormat af = new AudioFormat.Builder()
+                .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
+                .build();
+        AudioFormat fmt = new AudioFormat.Builder()
                 .setSampleRate(sr)
                 .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
-                .setChannelMask(AudioFormat.CHANNEL_OUT_MONO).build();
-        AudioTrack tr = new AudioTrack(aa, af, pcm.length*2, AudioTrack.MODE_STATIC, AudioManager.AUDIO_SESSION_ID_GENERATE);
+                .setChannelMask(AudioFormat.CHANNEL_OUT_MONO)
+                .build();
+
+        AudioTrack tr = new AudioTrack(attrs, fmt, pcm.length*2, AudioTrack.MODE_STATIC, AudioManager.AUDIO_SESSION_ID_GENERATE);
         if (tr.getState() != AudioTrack.STATE_INITIALIZED) {
             try { tr.release(); } catch (Throwable ignored) {}
+            music = null;
             return;
         }
         int written = tr.write(pcm, 0, pcm.length);
         if (written <= 0) {
             try { tr.release(); } catch (Throwable ignored) {}
+            music = null;
             return;
         }
-        try { tr.setLoopPoints(0, Math.min(pcm.length, written), -1); } catch (Throwable ignored) {}
-        try { tr.setVolume(.30f); } catch (Throwable ignored) {}
+        try { tr.setLoopPoints(0, Math.min(written, pcm.length), -1); } catch (Throwable ignored) {}
+        try { tr.setVolume(.42f); } catch (Throwable ignored) {}
         music = tr;
+    }
+
+    private double midiToFreq(int midi) {
+        return 440.0 * Math.pow(2.0, (midi - 69) / 12.0);
     }
 
     private void startMusic() {
         try {
-            if (music != null && music.getState() == AudioTrack.STATE_INITIALIZED && music.getPlayState() != AudioTrack.PLAYSTATE_PLAYING) music.play();
+            if (music != null && music.getState() == AudioTrack.STATE_INITIALIZED &&
+                    music.getPlayState() != AudioTrack.PLAYSTATE_PLAYING) {
+                music.play();
+            }
         } catch (Throwable ignored) {}
     }
 
     private void pauseMusic() {
-        try { if (music != null && music.getPlayState() == AudioTrack.PLAYSTATE_PLAYING) music.pause(); }
-        catch (Throwable ignored) {}
+        try {
+            if (music != null && music.getPlayState() == AudioTrack.PLAYSTATE_PLAYING) music.pause();
+        } catch (Throwable ignored) {}
     }
 
     void release() {
         released = true;
         h.removeCallbacksAndMessages(null);
-        try { if (tone != null) tone.release(); } catch (Throwable ignored) {}
-        tone = null;
+        try { if (sfx != null) sfx.release(); } catch (Throwable ignored) {}
+        sfx = null;
         try {
             if (music != null) {
-                if (music.getState() == AudioTrack.STATE_INITIALIZED) { try { music.stop(); } catch (Throwable ignored) {} }
+                try { music.stop(); } catch (Throwable ignored) {}
                 music.release();
             }
         } catch (Throwable ignored) {}
