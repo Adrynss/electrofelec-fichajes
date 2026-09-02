@@ -9,6 +9,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Apply mockup-approved Wood Rift UI
+        run: |
+          base64 -d woodrift-v220-mockup-patch.tgz.b64 > /tmp/woodrift-v220.tgz
+          tar -xzf /tmp/woodrift-v220.tgz
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -25,10 +29,10 @@ jobs:
           "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose woodrift-game/app/build/outputs/apk/debug/app-debug.apk
           "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging woodrift-game/app/build/outputs/apk/debug/app-debug.apk | tee /tmp/badging.txt
           grep -q "package: name='com.woodrift.game'" /tmp/badging.txt
-          grep -q "versionName='2.1.2'" /tmp/badging.txt
+          grep -q "versionName='2.2.0'" /tmp/badging.txt
           grep -q "launchable-activity: name='com.woodrift.game.MainActivity'" /tmp/badging.txt
-          cp woodrift-game/app/build/outputs/apk/debug/app-debug.apk WoodRift_v2_1_2.apk
+          cp woodrift-game/app/build/outputs/apk/debug/app-debug.apk WoodRift_v2_2_0_Mockup.apk
       - uses: actions/upload-artifact@v4
         with:
-          name: WoodRift_v2_1_2_APK
-          path: WoodRift_v2_1_2.apk
+          name: WoodRift_v2_2_0_Mockup_APK
+          path: WoodRift_v2_2_0_Mockup.apk
