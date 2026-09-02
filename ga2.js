@@ -6,7 +6,6 @@ const scripts=[
  ['gestor-accounting-ui.js',3],
  ['gestor-accounting-batch-ui.js',1],
  ['gestor-accounting-v160-patch.js',1],
- ['gestor-accounting-v207-supabase-only.js',1],
  ['gestor-accounting-bankdrive-patch.js',2],
  ['gestor-accounting-v161-prosegur-patch.js',1],
  ['gestor-accounting-v162-pending-fix.js',1],
@@ -33,7 +32,8 @@ const scripts=[
  ['gestor-accounting-v195-order-only-cancel.js',5],
  ['gestor-accounting-v196-invoice-status-pdf.js',2],
  ['gestor-accounting-v197-ignore-invoice-toolbar-cleanup.js',2],
- ['gestor-accounting-v202-cloud-sync.js',1]
+ ['gestor-accounting-v202-cloud-sync.js',1],
+ ['gestor-accounting-v208-import-stable.js',1]
 ];
 for(let [file,ver] of scripts)await load(file,ver);
 try{let prl=await fetch('https://raw.githubusercontent.com/Adrynss/electrofelec-fichajes/main/gestor-cae-v203-prl-order.js?v=4',{cache:'no-store'});if(prl.ok)(0,eval)(await prl.text());else console.warn('No se pudo cargar orden PRL',prl.status)}catch(e){console.warn('Orden PRL',e)}
