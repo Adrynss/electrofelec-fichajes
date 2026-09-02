@@ -31,6 +31,7 @@ const scripts=[
  ['gestor-accounting-v169-prosegur-base-force.js',1],
  ['gestor-accounting-v170-retention-reconcile.js',1],
  ['gestor-accounting-v176-summary-render.js',2],
+ ['gestor-accounting-ytd-patch.js',5],
  ['gestor-accounting-v177-europastry-orders.js',1],
  ['gestor-accounting-v178-invoice-actions-bankmatch.js',1],
  ['gestor-accounting-v180-cancelled-docs.js',3],
@@ -52,6 +53,6 @@ stabilizeAccountingImportHooks();
 setTimeout(stabilizeAccountingImportHooks,1000);
 try{let prl=await fetch('https://raw.githubusercontent.com/Adrynss/electrofelec-fichajes/main/gestor-cae-v203-prl-order.js?v=4',{cache:'no-store'});if(prl.ok)(0,eval)(await prl.text());else console.warn('No se pudo cargar orden PRL',prl.status)}catch(e){console.warn('Orden PRL',e)}
 try{let cards=await fetch('https://raw.githubusercontent.com/Adrynss/electrofelec-fichajes/main/gestor-cae-v205-employee-cards.js?v=2',{cache:'no-store'});if(cards.ok)(0,eval)(await cards.text());else console.warn('No se pudieron cargar tarjetas CAE',cards.status)}catch(e){console.warn('Tarjetas CAE',e)}
-try{let ft=await fetch('https://raw.githubusercontent.com/Adrynss/electrofelec-fichajes/main/gestor-fichajes-today-v201.js?v=7',{cache:'no-store'});if(ft.ok)(0,eval)(await ft.text());else console.warn('No se pudo cargar fichajes de hoy',ft.status)}catch(e){console.warn('Fichajes de hoy',e)}
+try{let ft=await fetch('https://raw.githubusercontent.com/Adrynss/electrofelec-fichajes/main/gestor-fichajes-today-v201.js?v=7',{cache:'no-store'});if(ft.ok)(0,eval)(await ft.text());else console.warn('Fichajes de hoy',ft.status)}catch(e){console.warn('Fichajes de hoy',e)}
 console.info('Contabilidad Electrofelec cargada · bundle consolidado');
 })();
