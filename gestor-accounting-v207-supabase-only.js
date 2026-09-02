@@ -83,5 +83,5 @@ window.acSavePdfBatch=async function(type){
 };
 window.acSavePdfBatch.__v207=true;
 
-setTimeout(hookBatch,40);setInterval(hookBatch,350);
+hookBatch();
 })();
