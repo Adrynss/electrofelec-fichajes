@@ -9,15 +9,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Apply mockup-approved Wood Rift UI
+      - name: Apply approved Wood Rift UI
         run: |
           python3 - <<'PY'
           import base64, re
           text=open('woodrift-v220-mockup-patch.tgz.b64','r',encoding='utf-8').read()
           text=''.join(re.findall(r'[A-Za-z0-9+/=]', text))
-          open('/tmp/woodrift-v220.tgz','wb').write(base64.b64decode(text))
+          open('/tmp/woodrift-v221.tgz','wb').write(base64.b64decode(text))
           PY
-          tar -xzf /tmp/woodrift-v220.tgz
+          tar -xzf /tmp/woodrift-v221.tgz
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -34,10 +34,10 @@ jobs:
           "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose woodrift-game/app/build/outputs/apk/debug/app-debug.apk
           "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging woodrift-game/app/build/outputs/apk/debug/app-debug.apk | tee /tmp/badging.txt
           grep -q "package: name='com.woodrift.game'" /tmp/badging.txt
-          grep -q "versionName='2.2.0'" /tmp/badging.txt
+          grep -q "versionName='2.2.1'" /tmp/badging.txt
           grep -q "launchable-activity: name='com.woodrift.game.MainActivity'" /tmp/badging.txt
-          cp woodrift-game/app/build/outputs/apk/debug/app-debug.apk WoodRift_v2_2_0_Mockup.apk
+          cp woodrift-game/app/build/outputs/apk/debug/app-debug.apk WoodRift_v2_2_1_MockupCloser.apk
       - uses: actions/upload-artifact@v4
         with:
-          name: WoodRift_v2_2_0_Mockup_APK
-          path: WoodRift_v2_2_0_Mockup.apk
+          name: WoodRift_v2_2_1_MockupCloser_APK
+          path: WoodRift_v2_2_1_MockupCloser.apk
