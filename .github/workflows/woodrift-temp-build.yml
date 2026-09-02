@@ -1,4 +1,4 @@
-name: Temporary Wood Rift APK build
+name: Temporary Neon Rift APK build
 on:
   push:
     branches: [ woodrift-apk-build-20260902 ]
@@ -9,15 +9,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Apply approved Wood Rift UI
+      - name: Apply Neon Rift 2.2.4 patch
         run: |
           python3 - <<'PY'
           import base64, re
           text=open('woodrift-v220-mockup-patch.tgz.b64','r',encoding='utf-8').read()
           text=''.join(re.findall(r'[A-Za-z0-9+/=]', text))
-          open('/tmp/woodrift-v223.tgz','wb').write(base64.b64decode(text))
+          open('/tmp/neonrift-v224.tgz','wb').write(base64.b64decode(text))
           PY
-          tar -xzf /tmp/woodrift-v223.tgz
+          tar -xzf /tmp/neonrift-v224.tgz
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -27,17 +27,18 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.9'
-      - name: Build Wood Rift
+      - name: Build Neon Rift
         run: cd woodrift-game && gradle assembleDebug
       - name: Verify APK and manifest
         run: |
           "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose woodrift-game/app/build/outputs/apk/debug/app-debug.apk
           "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging woodrift-game/app/build/outputs/apk/debug/app-debug.apk | tee /tmp/badging.txt
           grep -q "package: name='com.woodrift.game'" /tmp/badging.txt
-          grep -q "versionName='2.2.3'" /tmp/badging.txt
+          grep -q "versionName='2.2.4'" /tmp/badging.txt
+          grep -q "application-label:'Neon Rift'" /tmp/badging.txt
           grep -q "launchable-activity: name='com.woodrift.game.MainActivity'" /tmp/badging.txt
-          cp woodrift-game/app/build/outputs/apk/debug/app-debug.apk WoodRift_v2_2_3_Themes.apk
+          cp woodrift-game/app/build/outputs/apk/debug/app-debug.apk NeonRift_v2_2_4.apk
       - uses: actions/upload-artifact@v4
         with:
-          name: WoodRift_v2_2_3_Themes_APK
-          path: WoodRift_v2_2_3_Themes.apk
+          name: NeonRift_v2_2_4_APK
+          path: NeonRift_v2_2_4.apk
