@@ -11,12 +11,8 @@ jobs:
       - uses: actions/checkout@v4
       - name: Apply Neon Rift 2.2.4 patch
         run: |
-          python3 - <<'PY'
-          import base64, re
-          text=open('woodrift-v220-mockup-patch.tgz.b64','r',encoding='utf-8').read()
-          text=''.join(re.findall(r'[A-Za-z0-9+/=]', text))
-          open('/tmp/neonrift-v224.tgz','wb').write(base64.b64decode(text))
-          PY
+          cat neonrift-v224.part00 neonrift-v224.part01 neonrift-v224.part02 neonrift-v224.part03 neonrift-v224.part04 > /tmp/neonrift-v224.b64
+          base64 -d /tmp/neonrift-v224.b64 > /tmp/neonrift-v224.tgz
           tar -xzf /tmp/neonrift-v224.tgz
       - uses: actions/setup-java@v4
         with:
