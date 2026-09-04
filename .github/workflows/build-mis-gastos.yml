@@ -42,7 +42,7 @@ jobs:
               if marker not in h: raise SystemExit('Falta '+marker)
           amounts=[400,150,300,15,44,600,18.30,25.07,39.17,284,56.44,479.93,250,750]
           if round(sum(amounts),2) != 3411.91: raise SystemExit('Total recuperado incorrecto')
-          print('UI v1.2 OK - 14 movimientos - 3411.91 EUR')
+          print('UI OK - 14 movimientos - 3411.91 EUR')
           PY
           node --check /tmp/misgastos.js
       - name: Build unsigned release APK
@@ -51,18 +51,17 @@ jobs:
         run: |
           test -s app/build/outputs/apk/release/app-release-unsigned.apk
           "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging app/build/outputs/apk/release/app-release-unsigned.apk | tee /tmp/badging.txt
-          grep -q "package: name='com.adrynss.misgastos'" /tmp/badging.txt
-          grep -q "versionCode='3'" /tmp/badging.txt
-          grep -q "versionName='1.2'" /tmp/badging.txt
+          grep -q "package: name='com.adrynss.misgastos.personal'" /tmp/badging.txt
+          grep -q "versionCode='4'" /tmp/badging.txt
+          grep -q "versionName='1.2.1'" /tmp/badging.txt
       - name: Prepare artifact and signing tools
         run: |
           mkdir -p dist/lib
-          cp app/build/outputs/apk/release/app-release-unsigned.apk dist/MisGastos-v1.2-RECUPERADO-UNSIGNED.apk
+          cp app/build/outputs/apk/release/app-release-unsigned.apk dist/MisGastos-v1.2.1-PERSONAL-UNSIGNED.apk
           cp "$ANDROID_HOME/build-tools/35.0.0/apksigner" dist/apksigner
           cp "$ANDROID_HOME/build-tools/35.0.0/lib/apksigner.jar" dist/lib/apksigner.jar
-          cp "$ANDROID_HOME/build-tools/35.0.0/zipalign" dist/zipalign
       - uses: actions/upload-artifact@v4
         with:
-          name: MisGastos-v1.2-build-package
+          name: MisGastos-v1.2.1-personal-build
           path: mis-gastos-app/dist/**
           if-no-files-found: error
