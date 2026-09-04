@@ -28,9 +28,9 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.10.2'
-      - name: Apply Mis Gastos v1.1
-        run: python patch_v11.py
-      - name: Validate JavaScript
+      - name: Apply Mis Gastos v1.2
+        run: python patch_v12.py
+      - name: Validate JavaScript and recovered data
         run: |
           python - <<'PY'
           from pathlib import Path
@@ -38,9 +38,11 @@ jobs:
           h=Path('app/src/main/assets/index.html').read_text(encoding='utf-8')
           scripts=re.findall(r'<script(?:\s[^>]*)?>(.*?)</script>',h,re.S|re.I)
           Path('/tmp/misgastos.js').write_text('\n'.join(scripts),encoding='utf-8')
-          for marker in ['MIS_GASTOS_V11','totalIncome','balanceValue','openIncome','saveIncome']:
+          for marker in ['MIS_GASTOS_V11','MIS_GASTOS_V12_SEED','totalIncome','balanceValue','openIncome','saveIncome','seed_prestamo','seed_alquiler']:
               if marker not in h: raise SystemExit('Falta '+marker)
-          print('UI v1.1 OK')
+          amounts=[400,150,300,15,44,600,18.30,25.07,39.17,284,56.44,479.93,250,750]
+          if round(sum(amounts),2) != 3411.91: raise SystemExit('Total recuperado incorrecto')
+          print('UI v1.2 OK - 14 movimientos - 3411.91 EUR')
           PY
           node --check /tmp/misgastos.js
       - name: Build unsigned release APK
@@ -50,12 +52,12 @@ jobs:
           test -s app/build/outputs/apk/release/app-release-unsigned.apk
           "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging app/build/outputs/apk/release/app-release-unsigned.apk | tee /tmp/badging.txt
           grep -q "package: name='com.adrynss.misgastos'" /tmp/badging.txt
-          grep -q "versionCode='2'" /tmp/badging.txt
-          grep -q "versionName='1.1'" /tmp/badging.txt
+          grep -q "versionCode='3'" /tmp/badging.txt
+          grep -q "versionName='1.2'" /tmp/badging.txt
       - name: Prepare artifact
-        run: cp app/build/outputs/apk/release/app-release-unsigned.apk MisGastos-v1.1-UNSIGNED.apk
+        run: cp app/build/outputs/apk/release/app-release-unsigned.apk MisGastos-v1.2-RECUPERADO-UNSIGNED.apk
       - uses: actions/upload-artifact@v4
         with:
-          name: MisGastos-v1.1-unsigned
-          path: mis-gastos-app/MisGastos-v1.1-UNSIGNED.apk
+          name: MisGastos-v1.2-recuperado-unsigned
+          path: mis-gastos-app/MisGastos-v1.2-RECUPERADO-UNSIGNED.apk
           if-no-files-found: error
