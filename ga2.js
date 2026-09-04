@@ -6,11 +6,11 @@ function stabilizeAccountingImportHooks(){
  try{
   let s=window.acSavePdfBatch;
   if(typeof s==='function'){
-   s.__v160=true;s.__v161=true;s.__v162=true;s.__v194=true;s.__v208=true;
+   s.__v160=true;s.__v161=true;s.__v162=true;s.__v164=true;s.__v194=true;s.__v208=true;s.__v209Stable=true;
   }
   let p=window.acPdfBatchSelected;
   if(typeof p==='function'){
-   p.__v160=true;p.__v161=true;p.__v162=true;p.__v208Capture=true;
+   p.__v160=true;p.__v161=true;p.__v162=true;p.__v208Capture=true;p.__v209Stable=true;
   }
  }catch(e){console.warn('Protección importación contabilidad',e)}
 }
@@ -22,7 +22,7 @@ const scripts=[
  ['gestor-accounting-v161-prosegur-patch.js',1],
  ['gestor-accounting-v162-pending-fix.js',1],
  ['gestor-accounting-v163-orderlink-summary.js',2],
- ['gestor-accounting-v164-pdf-sync.js',1],
+ ['gestor-accounting-v164-pdf-sync.js',2],
  ['gestor-accounting-v165-ui-polish.js',1],
  ['gestor-accounting-v166-prosegur-link-all.js',2],
  ['gestor-accounting-v167-order-layout.js',4],
@@ -46,7 +46,8 @@ const scripts=[
  ['gestor-accounting-v196-invoice-status-pdf.js',2],
  ['gestor-accounting-v197-ignore-invoice-toolbar-cleanup.js',2],
  ['gestor-accounting-v202-cloud-sync.js',1],
- ['gestor-accounting-v208-import-stable.js',2]
+ ['gestor-accounting-v208-import-stable.js',2],
+ ['gestor-accounting-v209-stability-sort.js',1]
 ];
 for(let [file,ver] of scripts)await load(file,ver);
 stabilizeAccountingImportHooks();
