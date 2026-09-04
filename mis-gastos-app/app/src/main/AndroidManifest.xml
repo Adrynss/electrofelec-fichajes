@@ -8,7 +8,7 @@
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
         <activity
-            android:name=".MainActivity"
+            android:name="com.adrynss.misgastos.MainActivity"
             android:exported="true"
             android:screenOrientation="portrait">
             <intent-filter>
