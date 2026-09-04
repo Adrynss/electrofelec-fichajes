@@ -7,8 +7,8 @@ android {
     compileSdk 35
 
     defaultConfig {
-        applicationId 'com.electrofelec.admin'
-        minSdk 23
+        applicationId 'com.adrynss.misgastos'
+        minSdk 24
         targetSdk 35
         versionCode 18
         versionName '2.12-admin'
