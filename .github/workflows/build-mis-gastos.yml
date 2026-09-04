@@ -5,12 +5,10 @@ on:
     paths:
       - 'mis-gastos-app/**'
       - '.github/workflows/build-mis-gastos.yml'
-  pull_request:
-    branches: [ "main" ]
-    paths:
-      - 'mis-gastos-app/**'
-      - '.github/workflows/build-mis-gastos.yml'
   workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
   build:
@@ -26,15 +24,38 @@ jobs:
           java-version: '17'
       - uses: android-actions/setup-android@v3
       - name: Install Android SDK
-        run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
+        run: yes | sdkmanager "platforms;android-35" "build-tools;35.0.0"
       - uses: gradle/actions/setup-gradle@v4
         with:
-          gradle-version: '8.9'
-      - name: Build debug APK
-        run: gradle assembleDebug --stacktrace
-      - name: Copy APK
-        run: cp app/build/outputs/apk/debug/app-debug.apk MisGastos-v1.0.apk
+          gradle-version: '8.10.2'
+      - name: Apply Mis Gastos v1.1
+        run: python patch_v11.py
+      - name: Validate JavaScript
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          h=Path('app/src/main/assets/index.html').read_text(encoding='utf-8')
+          scripts=re.findall(r'<script(?:\s[^>]*)?>(.*?)</script>',h,re.S|re.I)
+          Path('/tmp/misgastos.js').write_text('\n'.join(scripts),encoding='utf-8')
+          for marker in ['MIS_GASTOS_V11','totalIncome','balanceValue','openIncome','saveIncome']:
+              if marker not in h: raise SystemExit('Falta '+marker)
+          print('UI v1.1 OK')
+          PY
+          node --check /tmp/misgastos.js
+      - name: Build unsigned release APK
+        run: gradle assembleRelease --stacktrace
+      - name: Verify APK metadata
+        run: |
+          test -s app/build/outputs/apk/release/app-release-unsigned.apk
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging app/build/outputs/apk/release/app-release-unsigned.apk | tee /tmp/badging.txt
+          grep -q "package: name='com.adrynss.misgastos'" /tmp/badging.txt
+          grep -q "versionCode='2'" /tmp/badging.txt
+          grep -q "versionName='1.1'" /tmp/badging.txt
+      - name: Prepare artifact
+        run: cp app/build/outputs/apk/release/app-release-unsigned.apk MisGastos-v1.1-UNSIGNED.apk
       - uses: actions/upload-artifact@v4
         with:
-          name: MisGastos-v1.0-apk
-          path: mis-gastos-app/MisGastos-v1.0.apk
+          name: MisGastos-v1.1-unsigned
+          path: mis-gastos-app/MisGastos-v1.1-UNSIGNED.apk
+          if-no-files-found: error
