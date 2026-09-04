@@ -54,10 +54,15 @@ jobs:
           grep -q "package: name='com.adrynss.misgastos'" /tmp/badging.txt
           grep -q "versionCode='3'" /tmp/badging.txt
           grep -q "versionName='1.2'" /tmp/badging.txt
-      - name: Prepare artifact
-        run: cp app/build/outputs/apk/release/app-release-unsigned.apk MisGastos-v1.2-RECUPERADO-UNSIGNED.apk
+      - name: Prepare artifact and signing tools
+        run: |
+          mkdir -p dist/lib
+          cp app/build/outputs/apk/release/app-release-unsigned.apk dist/MisGastos-v1.2-RECUPERADO-UNSIGNED.apk
+          cp "$ANDROID_HOME/build-tools/35.0.0/apksigner" dist/apksigner
+          cp "$ANDROID_HOME/build-tools/35.0.0/lib/apksigner.jar" dist/lib/apksigner.jar
+          cp "$ANDROID_HOME/build-tools/35.0.0/zipalign" dist/zipalign
       - uses: actions/upload-artifact@v4
         with:
-          name: MisGastos-v1.2-recuperado-unsigned
-          path: mis-gastos-app/MisGastos-v1.2-RECUPERADO-UNSIGNED.apk
+          name: MisGastos-v1.2-build-package
+          path: mis-gastos-app/dist/**
           if-no-files-found: error
