@@ -5,10 +5,10 @@ android {
     compileSdk 35
 
     defaultConfig {
-        applicationId 'com.adrynss.misgastos'
+        applicationId 'com.adrynss.misgastos.personal'
         minSdk 24
         targetSdk 35
-        versionCode 3
-        versionName '1.2'
+        versionCode 4
+        versionName '1.2.1'
     }
 }
