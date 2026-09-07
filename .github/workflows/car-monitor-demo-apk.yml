@@ -52,16 +52,20 @@ jobs:
         working-directory: car-monitor-demo
         run: python3 v13_patch.py
 
+      - name: Apply v14 dynamic gauge fill patch
+        working-directory: car-monitor-demo
+        run: python3 v14_patch.py
+
       - name: Build debug APK
         working-directory: car-monitor-demo
         run: gradle --no-daemon assembleDebug
 
       - name: Copy APK
-        run: cp car-monitor-demo/app/build/outputs/apk/debug/app-debug.apk CarMonitor_v13_Polished.apk
+        run: cp car-monitor-demo/app/build/outputs/apk/debug/app-debug.apk CarMonitor_v14_DynamicGauges.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: CarMonitor_v13_Polished
-          path: CarMonitor_v13_Polished.apk
+          name: CarMonitor_v14_DynamicGauges
+          path: CarMonitor_v14_DynamicGauges.apk
           if-no-files-found: error
