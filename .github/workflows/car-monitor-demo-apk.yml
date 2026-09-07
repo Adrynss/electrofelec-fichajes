@@ -32,16 +32,20 @@ jobs:
           yes | sdkmanager --licenses >/dev/null || true
           sdkmanager 'platforms;android-35' 'build-tools;35.0.0'
 
+      - name: Apply v9 UI patch
+        working-directory: car-monitor-demo
+        run: python3 v9_patch.py
+
       - name: Build debug APK
         working-directory: car-monitor-demo
         run: gradle --no-daemon assembleDebug
 
       - name: Copy APK
-        run: cp car-monitor-demo/app/build/outputs/apk/debug/app-debug.apk CarMonitor_v8_Custom.apk
+        run: cp car-monitor-demo/app/build/outputs/apk/debug/app-debug.apk CarMonitor_v9_Reference.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: CarMonitor_v8_Custom
-          path: CarMonitor_v8_Custom.apk
+          name: CarMonitor_v9_Reference
+          path: CarMonitor_v9_Reference.apk
           if-no-files-found: error
