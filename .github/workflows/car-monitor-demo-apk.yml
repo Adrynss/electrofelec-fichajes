@@ -37,11 +37,11 @@ jobs:
         run: gradle --no-daemon assembleDebug
 
       - name: Copy APK
-        run: cp car-monitor-demo/app/build/outputs/apk/debug/app-debug.apk CarMonitor_Demo_v5.apk
+        run: cp car-monitor-demo/app/build/outputs/apk/debug/app-debug.apk CarMonitor_Demo_v6.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: CarMonitor_Demo_v5
-          path: CarMonitor_Demo_v5.apk
+          name: CarMonitor_Demo_v6
+          path: CarMonitor_Demo_v6.apk
           if-no-files-found: error
