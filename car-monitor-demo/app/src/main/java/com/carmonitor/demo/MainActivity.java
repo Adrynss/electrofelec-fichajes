@@ -5,14 +5,15 @@ import android.app.Activity;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothSocket;
+import android.content.Context;
+import android.content.SharedPreferences;
 import android.content.pm.ActivityInfo;
 import android.content.pm.PackageManager;
 import android.graphics.Canvas;
 import android.graphics.Color;
-import android.graphics.LinearGradient;
 import android.graphics.Paint;
+import android.graphics.Path;
 import android.graphics.RectF;
-import android.graphics.Shader;
 import android.os.Build;
 import android.os.Bundle;
 import android.view.MotionEvent;
@@ -22,7 +23,6 @@ import android.view.WindowManager;
 
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
@@ -33,282 +33,494 @@ import java.util.UUID;
 
 public class MainActivity extends Activity {
     private DashboardView dashboard;
-    private ObdManager obd;
+    private static final int REQ_BT = 5001;
 
-    @Override
-    protected void onCreate(Bundle savedInstanceState) {
+    @Override protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         requestWindowFeature(Window.FEATURE_NO_TITLE);
         setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
         getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN, WindowManager.LayoutParams.FLAG_FULLSCREEN);
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         getWindow().getDecorView().setSystemUiVisibility(
-                View.SYSTEM_UI_FLAG_FULLSCREEN |
-                View.SYSTEM_UI_FLAG_HIDE_NAVIGATION |
-                View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY |
-                View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN |
-                View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION |
-                View.SYSTEM_UI_FLAG_LAYOUT_STABLE);
-        obd = new ObdManager(this);
-        dashboard = new DashboardView(this, obd);
+                View.SYSTEM_UI_FLAG_FULLSCREEN | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION |
+                View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN |
+                View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION | View.SYSTEM_UI_FLAG_LAYOUT_STABLE);
+        dashboard = new DashboardView(this);
         setContentView(dashboard);
-        if (Build.VERSION.SDK_INT >= 31 && checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
-            requestPermissions(new String[]{Manifest.permission.BLUETOOTH_CONNECT}, 41);
-        }
+        ensureBluetoothPermission();
     }
 
-    @Override
-    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        if (requestCode == 41 && dashboard != null) {
-            obd.refreshBondedDevices();
-            dashboard.invalidate();
-        }
-    }
-
-    @Override
-    protected void onDestroy() {
-        if (obd != null) obd.disconnect();
-        super.onDestroy();
-    }
-
-    public boolean hasBluetoothPermission() {
+    private boolean hasBluetoothPermission() {
         return Build.VERSION.SDK_INT < 31 || checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED;
     }
 
-    static class LiveData {
-        volatile float rpm = Float.NaN, speed = Float.NaN, coolant = Float.NaN, voltage = Float.NaN;
-        volatile float load = Float.NaN, maf = Float.NaN, intakeTemp = Float.NaN, map = Float.NaN;
-        volatile float ambient = Float.NaN, throttle = Float.NaN, fuelRate = Float.NaN;
-        volatile float instantConsumption = Float.NaN, avgConsumption = Float.NaN;
-        volatile float tripKm = 0f, tripFuel = 0f, maxSpeed = 0f;
-        volatile long tripMillis = 0L, lastUpdate = 0L;
-        volatile String protocol = "";
-        volatile String[] dtcs = new String[0];
-        volatile boolean fuelRateDirect = false;
+    private void ensureBluetoothPermission() {
+        if (Build.VERSION.SDK_INT >= 31 && !hasBluetoothPermission()) requestPermissions(new String[]{Manifest.permission.BLUETOOTH_CONNECT}, REQ_BT);
     }
 
-    class ObdManager {
-        private final MainActivity activity;
-        final LiveData data = new LiveData();
-        private final UUID SPP = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB");
-        volatile boolean connected = false, connecting = false, demoMode = true, diesel = true;
-        volatile String deviceName = "", statusMessage = "OBD desconectado";
-        final List<BluetoothDevice> bonded = new ArrayList<>();
-        private BluetoothSocket socket;
-        private InputStream input;
-        private OutputStream output;
-        private Thread worker;
-        private volatile boolean stop = false, requestDtc = false, requestClearDtc = false;
-        private long lastLoop = 0L;
-        private int loopCount = 0;
+    @Override public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (dashboard != null) dashboard.invalidate();
+    }
 
-        ObdManager(MainActivity a) { activity = a; refreshBondedDevices(); }
+    @Override protected void onDestroy() {
+        if (dashboard != null) dashboard.obd.disconnect();
+        super.onDestroy();
+    }
 
-        void refreshBondedDevices() {
-            bonded.clear();
-            try {
-                if (!activity.hasBluetoothPermission()) return;
-                BluetoothAdapter adapter = BluetoothAdapter.getDefaultAdapter();
-                if (adapter == null) return;
-                Set<BluetoothDevice> set = adapter.getBondedDevices();
-                if (set != null) bonded.addAll(set);
-            } catch (Exception ignored) {}
+    private class DashboardView extends View {
+        private final Paint p = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Paint stroke = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final SharedPreferences prefs;
+        private final ObdManager obd = new ObdManager();
+
+        private final int bg = Color.rgb(5,7,9);
+        private final int panel = Color.rgb(12,16,19);
+        private final int panel2 = Color.rgb(15,20,24);
+        private final int border = Color.rgb(39,47,53);
+        private final int white = Color.rgb(246,248,250);
+        private final int muted = Color.rgb(164,173,181);
+        private final int green = Color.rgb(75,218,112);
+        private final int red = Color.rgb(244,80,65);
+
+        private int accent;
+        private int accent2;
+        private boolean diesel;
+        private int page = 0; // 0 inicio, 1 viaje, 2 motor, 3 errores, 4 conexión, 5 ajustes
+        private float s = 1f;
+        private final RectF obdRect = new RectF();
+        private final RectF gearRect = new RectF();
+        private final RectF resetTripRect = new RectF();
+        private final RectF readDtcRect = new RectF();
+        private final RectF clearDtcRect = new RectF();
+        private final RectF fuelToggleRect = new RectF();
+        private final List<RectF> deviceRects = new ArrayList<>();
+        private final List<BluetoothDevice> deviceHits = new ArrayList<>();
+        private final List<RectF> colorRects = new ArrayList<>();
+        private final int[] themeColors = new int[]{
+                Color.rgb(255,174,0), Color.rgb(255,126,0), Color.rgb(255,65,138),
+                Color.rgb(226,64,255), Color.rgb(145,78,255), Color.rgb(74,120,255),
+                Color.rgb(0,190,255), Color.rgb(0,210,175), Color.rgb(88,214,87),
+                Color.rgb(255,70,70), Color.rgb(230,230,230), Color.rgb(255,214,82)
+        };
+        private final String[] themeNames = new String[]{"Amarillo","Naranja","Rosa","Fucsia","Violeta","Azul","Cian","Turquesa","Verde","Rojo","Blanco","Dorado"};
+
+        DashboardView(Context context) {
+            super(context);
+            setBackgroundColor(bg);
+            prefs = getSharedPreferences("car_monitor", MODE_PRIVATE);
+            accent = prefs.getInt("accent", Color.rgb(255,174,0));
+            accent2 = brighten(accent, 1.15f);
+            diesel = prefs.getBoolean("diesel", true);
+            stroke.setStyle(Paint.Style.STROKE);
+            stroke.setStrokeCap(Paint.Cap.ROUND);
+            postDelayed(new Runnable() { @Override public void run() { invalidate(); postDelayed(this, 500); } }, 500);
         }
 
-        BluetoothDevice preferredDevice() {
-            refreshBondedDevices();
-            BluetoothDevice fallback = bonded.isEmpty() ? null : bonded.get(0);
-            for (BluetoothDevice d : bonded) {
-                try {
-                    String n = d.getName();
-                    if (n == null) continue;
-                    String u = n.toUpperCase(Locale.ROOT);
-                    if (u.contains("VGATE") || u.contains("VLINK") || u.contains("ICAR") || u.contains("OBD") || u.contains("ELM")) return d;
-                } catch (Exception ignored) {}
+        private int brighten(int c, float f) {
+            int r=Math.min(255,(int)(Color.red(c)*f)), g=Math.min(255,(int)(Color.green(c)*f)), b=Math.min(255,(int)(Color.blue(c)*f));
+            return Color.rgb(r,g,b);
+        }
+        private void setAccent(int c) {
+            accent=c; accent2=brighten(c,1.15f); prefs.edit().putInt("accent",c).apply(); invalidate();
+        }
+        private float X(float v) { return v*s; }
+        private void txt(Canvas c,String t,float x,float y,float size,int color,Paint.Align align,boolean bold){
+            p.setStyle(Paint.Style.FILL); p.setColor(color); p.setTextSize(X(size)); p.setTextAlign(align);
+            p.setTypeface(bold?android.graphics.Typeface.DEFAULT_BOLD:android.graphics.Typeface.DEFAULT); c.drawText(t,X(x),X(y),p);
+        }
+        private void round(Canvas c,float l,float t,float r,float b,float radius,int color){
+            p.setStyle(Paint.Style.FILL); p.setColor(color); c.drawRoundRect(new RectF(X(l),X(t),X(r),X(b)),X(radius),X(radius),p);
+        }
+        private void outline(Canvas c,float l,float t,float r,float b,float radius,int color,float width){
+            stroke.setColor(color); stroke.setStrokeWidth(X(width)); c.drawRoundRect(new RectF(X(l),X(t),X(r),X(b)),X(radius),X(radius),stroke);
+        }
+        private void line(Canvas c,float x1,float y1,float x2,float y2,int color,float width){
+            stroke.setColor(color); stroke.setStrokeWidth(X(width)); c.drawLine(X(x1),X(y1),X(x2),X(y2),stroke);
+        }
+
+        @Override protected void onDraw(Canvas canvas) {
+            super.onDraw(canvas);
+            float w=getWidth(), h=getHeight();
+            s=Math.min(w/1800f,h/900f);
+            float usedW=1800*s, usedH=900*s;
+            canvas.save();
+            canvas.translate((w-usedW)/2f,(h-usedH)/2f);
+            canvas.drawColor(bg);
+            drawHeader(canvas);
+            if(page==0) drawHome(canvas);
+            else if(page==1) drawTrip(canvas);
+            else if(page==2) drawEngine(canvas);
+            else if(page==3) drawErrors(canvas);
+            else if(page==4) drawConnection(canvas);
+            else drawSettings(canvas);
+            drawNav(canvas);
+            canvas.restore();
+        }
+
+        private void drawHeader(Canvas c){
+            // left car icon + title
+            drawCarIcon(c,25,24,42,accent);
+            txt(c,"Car Monitor",82,54,28,white,Paint.Align.LEFT,true);
+            line(c,22,81,1778,81,border,1);
+
+            gearRect.set(X(1262),X(18),X(1317),X(66));
+            round(c,1262,18,1317,66,24,panel2); outline(c,1262,18,1317,66,24,border,1);
+            drawGear(c,1289,42,13,muted);
+
+            obdRect.set(X(1327),X(18),X(1522),X(66));
+            round(c,1327,18,1522,66,24,panel2);
+            outline(c,1327,18,1522,66,24,obd.connected?green:red,1.7f);
+            p.setStyle(Paint.Style.FILL); p.setColor(obd.connected?green:red); c.drawCircle(X(1347),X(42),X(5),p);
+            txt(c,obd.connected?"OBD CONECTADO":"OBD DESCONECTADO",1363,50,16,white,Paint.Align.LEFT,true);
+
+            String temp;
+            if(obd.connected) temp=Float.isNaN(obd.ambient)?"--°C":String.format(Locale.getDefault(),"%.0f°C",obd.ambient);
+            else temp="27°C";
+            txt(c,temp,1534,51,27,accent2,Paint.Align.LEFT,true);
+            txt(c,"exterior",1602,50,17,muted,Paint.Align.LEFT,false);
+            txt(c,new SimpleDateFormat("HH:mm",Locale.getDefault()).format(new Date()),1770,51,27,white,Paint.Align.RIGHT,true);
+        }
+
+        private void drawHome(Canvas c){
+            // exact reference composition: large dual-gauge block + consumption column
+            round(c,23,103,1461,409,20,panel); outline(c,23,103,1461,409,20,border,1.2f);
+            line(c,744,128,744,383,border,1);
+            drawGauge(c,420,256,128,true);
+            drawGauge(c,1060,256,128,false);
+
+            drawConsumptionCard(c,1474,103,1778,250,true);
+            drawConsumptionCard(c,1474,263,1778,409,false);
+
+            // lower 3x2 grid, matching reference proportions
+            drawDataCard(c,23,421,601,574,0,"Motor",valueTemp(),"°C",accent);
+            drawDataCard(c,612,421,1190,574,1,"Batería",valueBattery(),"V",green);
+            drawDataCard(c,1201,421,1778,574,2,"Carga motor",valueLoad(),"%",accent);
+            drawDataCard(c,23,587,601,744,3,"Trayecto",valueTrip(),"km",white);
+            drawDataCard(c,612,587,1190,744,4,"Tiempo de viaje",valueTime(),"",white);
+            drawDataCard(c,1201,587,1778,744,5,"Sistema OBD",obd.dtcs.isEmpty()?"Sin errores":obd.dtcs.size()+" errores","",obd.dtcs.isEmpty()?green:red);
+        }
+
+        private int demoRpm(){ return 2150+(int)(Math.sin(System.currentTimeMillis()/1700.0)*35); }
+        private int demoSpeed(){ return 87+(int)(Math.sin(System.currentTimeMillis()/2300.0)*1); }
+        private int rpm(){ return obd.connected?obd.rpm:demoRpm(); }
+        private int speed(){ return obd.connected?obd.speed:demoSpeed(); }
+        private float currentCons(){ return obd.connected?obd.currentCons:6.4f; }
+        private float avgCons(){ return obd.connected && obd.tripKm>0.1?obd.avgCons:6.8f; }
+        private String valueTemp(){ return String.valueOf(obd.connected?Math.round(obd.coolant):89); }
+        private String valueBattery(){ return String.format(Locale.getDefault(),"%.1f",obd.connected?obd.voltage:14.2f); }
+        private String valueLoad(){ return String.valueOf(obd.connected?Math.round(obd.load):34); }
+        private String valueTrip(){ return String.format(Locale.getDefault(),"%.1f",obd.connected?obd.tripKm:124.6f); }
+        private String valueTime(){ long sec=obd.connected?obd.tripSeconds:6120; long h=sec/3600,m=(sec%3600)/60; return h>0?h+" h "+m+" min":m+" min"; }
+
+        private void drawGauge(Canvas c,float cx,float cy,float r,boolean rpmGauge){
+            p.setStyle(Paint.Style.FILL); p.setColor(Color.rgb(7,10,12)); c.drawCircle(X(cx),X(cy),X(r),p);
+            RectF rr=new RectF(X(cx-r+9),X(cy-r+9),X(cx+r-9),X(cy+r-9));
+            stroke.setStrokeWidth(X(10)); stroke.setStrokeCap(Paint.Cap.ROUND); stroke.setColor(Color.rgb(48,55,60));
+            c.drawArc(rr,135,270,false,stroke);
+            float frac=rpmGauge?Math.min(1,rpm()/7000f):Math.min(1,speed()/240f);
+            stroke.setColor(accent); c.drawArc(rr,135,270*frac,false,stroke);
+            if(rpmGauge){ stroke.setColor(red); c.drawArc(rr,75,60,false,stroke); }
+            int ticks=rpmGauge?8:12;
+            for(int i=0;i<=ticks;i++){
+                double a=Math.toRadians(135+270.0*i/ticks);
+                float x1=cx+(float)Math.cos(a)*(r-22),y1=cy+(float)Math.sin(a)*(r-22);
+                float x2=cx+(float)Math.cos(a)*(r-39),y2=cy+(float)Math.sin(a)*(r-39);
+                line(c,x1,y1,x2,y2,white,2);
+                String lab=rpmGauge?String.valueOf(i):String.valueOf(i*20);
+                float tx=cx+(float)Math.cos(a)*(r-57),ty=cy+(float)Math.sin(a)*(r-57)+5;
+                txt(c,lab,tx,ty,13,white,Paint.Align.CENTER,false);
             }
-            return fallback;
+            txt(c,String.valueOf(rpmGauge?rpm():speed()),cx,cy+10,47,white,Paint.Align.CENTER,true);
+            txt(c,rpmGauge?"RPM":"km/h",cx,cy+45,22,white,Paint.Align.CENTER,false);
+            if(rpmGauge) txt(c,"x1000",cx,cy+70,13,muted,Paint.Align.CENTER,false);
         }
 
-        void connectPreferred() {
-            BluetoothDevice d = preferredDevice();
-            if (d == null) {
-                statusMessage = activity.hasBluetoothPermission() ? "Empareja primero el OBD en Android" : "Permiso Bluetooth necesario";
+        private void drawConsumptionCard(Canvas c,float l,float t,float r,float b,boolean current){
+            round(c,l,t,r,b,18,panel); outline(c,l,t,r,b,18,border,1.2f);
+            drawFuelIcon(c,l+35,t+52,29,accent);
+            txt(c,current?"Consumo actual":"Consumo medio",l+75,t+31,18,muted,Paint.Align.LEFT,false);
+            String v=String.format(Locale.getDefault(),"%.1f",current?currentCons():avgCons());
+            txt(c,v,l+75,t+91,39,white,Paint.Align.LEFT,true);
+            txt(c,"L/100 km",r-18,b-22,17,muted,Paint.Align.RIGHT,false);
+        }
+
+        private void drawDataCard(Canvas c,float l,float t,float r,float b,int icon,String label,String value,String unit,int color){
+            round(c,l,t,r,b,18,panel); outline(c,l,t,r,b,18,border,1.2f);
+            txt(c,label,l+58,t+29,18,muted,Paint.Align.LEFT,false);
+            if(icon==0) drawThermometer(c,l+31,t+83,29,color);
+            else if(icon==1) drawBattery(c,l+28,t+75,34,color);
+            else if(icon==2) drawEngineIcon(c,l+28,t+74,37,color);
+            else if(icon==3) drawRoad(c,l+27,t+69,38,color);
+            else if(icon==4) drawClock(c,l+27,t+75,34,color);
+            else drawEngineIcon(c,l+28,t+72,37,color);
+            txt(c,value,l+58,b-24,icon==5?30:36,color==green?green:white,Paint.Align.LEFT,true);
+            if(!unit.isEmpty()) txt(c,unit,r-18,b-25,17,muted,Paint.Align.RIGHT,false);
+        }
+
+        private void drawNav(Canvas c){
+            line(c,23,760,1778,760,border,1);
+            String[] names={"Inicio","Viaje","Motor","Errores"};
+            for(int i=0;i<4;i++){
+                float cx=225+i*450;
+                boolean active=page==i;
+                int col=active?accent:muted;
+                if(i==0) drawHomeIcon(c,cx,787,19,col);
+                else if(i==1) drawTripIcon(c,cx,787,19,col);
+                else if(i==2) drawEngineIcon(c,cx-20,771,36,col);
+                else drawWarning(c,cx,787,20,col);
+                txt(c,names[i],cx,835,18,col,Paint.Align.CENTER,active);
+                if(active) round(c,cx-48,853,cx+48,858,3,accent);
+            }
+        }
+
+        private void drawTrip(Canvas c){
+            txt(c,"Viaje actual",30,118,27,white,Paint.Align.LEFT,true);
+            round(c,23,140,700,730,20,panel); outline(c,23,140,700,730,20,border,1);
+            txt(c,valueTrip(),55,280,82,white,Paint.Align.LEFT,true); txt(c,"km",295,275,28,accent,Paint.Align.LEFT,true);
+            txt(c,"Distancia recorrida",55,320,18,muted,Paint.Align.LEFT,false);
+            txt(c,valueTime(),55,403,43,white,Paint.Align.LEFT,true); txt(c,"Tiempo de viaje",55,440,18,muted,Paint.Align.LEFT,false);
+            txt(c,String.format(Locale.getDefault(),"%.1f",avgCons()),55,535,58,accent,Paint.Align.LEFT,true); txt(c,"L/100 km",220,528,25,white,Paint.Align.LEFT,false);
+            txt(c,"Consumo medio",55,570,18,muted,Paint.Align.LEFT,false);
+            resetTripRect.set(X(55),X(625),X(665),X(698)); round(c,55,625,665,698,16,Color.rgb(41,34,9)); outline(c,55,625,665,698,16,accent,1.5f);
+            txt(c,"REINICIAR VIAJE",360,670,23,accent,Paint.Align.CENTER,true);
+
+            drawMetricBox(c,725,140,1238,318,"Velocidad media",String.format(Locale.getDefault(),"%.0f",obd.connected?obd.avgSpeed:73f),"km/h",accent);
+            drawMetricBox(c,1265,140,1778,318,"Velocidad máxima",String.format(Locale.getDefault(),"%.0f",obd.connected?obd.maxSpeed:112f),"km/h",accent);
+            drawMetricBox(c,725,339,1238,517,"Combustible estimado",String.format(Locale.getDefault(),"%.1f",obd.connected?obd.tripFuel:8.5f),"L",accent);
+            drawMetricBox(c,1265,339,1778,517,"Consumo actual",String.format(Locale.getDefault(),"%.1f",currentCons()),"L/100 km",accent);
+            drawMetricBox(c,725,538,1238,730,"RPM actuales",String.valueOf(rpm()),"RPM",accent);
+            drawMetricBox(c,1265,538,1778,730,"Velocidad actual",String.valueOf(speed()),"km/h",accent);
+        }
+
+        private void drawMetricBox(Canvas c,float l,float t,float r,float b,String label,String value,String unit,int color){
+            round(c,l,t,r,b,18,panel); outline(c,l,t,r,b,18,border,1);
+            txt(c,label,l+28,t+35,18,muted,Paint.Align.LEFT,false);
+            txt(c,value,l+28,t+111,48,white,Paint.Align.LEFT,true);
+            txt(c,unit,r-24,t+110,19,color,Paint.Align.RIGHT,true);
+        }
+
+        private void drawEngine(Canvas c){
+            txt(c,"Motor",30,118,27,white,Paint.Align.LEFT,true);
+            float[][] box={{23,140,580,310},{606,140,1163,310},{1189,140,1778,310},{23,336,580,506},{606,336,1163,506},{1189,336,1778,506},{23,532,580,730},{606,532,1163,730},{1189,532,1778,730}};
+            String[] labs={"Temperatura motor","Voltaje batería","Carga motor","MAF","Temp. admisión","Presión MAP","Acelerador","RPM","Velocidad"};
+            String[] vals={valueTemp(),valueBattery(),valueLoad(),fmt(obd.connected?obd.maf:18.4f,1),String.valueOf(Math.round(obd.connected?obd.intake:31)),String.valueOf(Math.round(obd.connected?obd.map:101)),String.valueOf(Math.round(obd.connected?obd.throttle:22)),String.valueOf(rpm()),String.valueOf(speed())};
+            String[] units={"°C","V","%","g/s","°C","kPa","%","RPM","km/h"};
+            for(int i=0;i<9;i++) drawMetricBox(c,box[i][0],box[i][1],box[i][2],box[i][3],labs[i],vals[i],units[i],accent);
+        }
+        private String fmt(float v,int dec){ return String.format(Locale.getDefault(),dec==1?"%.1f":"%.0f",v); }
+
+        private void drawErrors(Canvas c){
+            txt(c,"Diagnóstico OBD",30,118,27,white,Paint.Align.LEFT,true);
+            round(c,23,140,1778,545,20,panel); outline(c,23,140,1778,545,20,border,1);
+            drawEngineIcon(c,55,181,45,obd.dtcs.isEmpty()?green:red);
+            txt(c,obd.dtcs.isEmpty()?"Sin errores detectados":obd.dtcs.size()+" códigos detectados",125,202,32,obd.dtcs.isEmpty()?green:red,Paint.Align.LEFT,true);
+            txt(c,obd.connected?"Centralita conectada":"Conecta el OBD para leer errores reales",125,235,18,muted,Paint.Align.LEFT,false);
+            if(obd.dtcs.isEmpty()) txt(c,"No hay códigos DTC almacenados en la lectura actual.",55,315,24,white,Paint.Align.LEFT,false);
+            else {
+                float y=300; for(String d:obd.dtcs){ txt(c,"•  "+d,55,y,25,white,Paint.Align.LEFT,true); y+=48; if(y>510) break; }
+            }
+            readDtcRect.set(X(23),X(575),X(868),X(710)); clearDtcRect.set(X(890),X(575),X(1778),X(710));
+            round(c,23,575,868,710,18,Color.rgb(35,31,12)); outline(c,23,575,868,710,18,accent,1.5f);
+            txt(c,"LEER ERRORES",445,650,25,accent,Paint.Align.CENTER,true);
+            round(c,890,575,1778,710,18,Color.rgb(35,17,17)); outline(c,890,575,1778,710,18,red,1.5f);
+            txt(c,"BORRAR ERRORES",1334,650,25,red,Paint.Align.CENTER,true);
+        }
+
+        private void drawConnection(Canvas c){
+            txt(c,"Conexión OBD",30,118,27,white,Paint.Align.LEFT,true);
+            round(c,23,140,1778,720,20,panel); outline(c,23,140,1778,720,20,border,1);
+            txt(c,obd.connected?"Conectado a "+obd.deviceName:"Selecciona un OBD Bluetooth emparejado",55,195,28,obd.connected?green:white,Paint.Align.LEFT,true);
+            txt(c,"Compatible con ELM327 / Vgate iCar Pro 2S mediante Bluetooth Classic",55,230,18,muted,Paint.Align.LEFT,false);
+            if(!hasBluetoothPermission()){
+                txt(c,"Falta permiso Bluetooth. Toca aquí para concederlo.",55,300,24,red,Paint.Align.LEFT,true);
                 return;
             }
-            connect(d);
+            deviceRects.clear(); deviceHits.clear();
+            List<BluetoothDevice> devices=getBonded();
+            if(devices.isEmpty()) txt(c,"No hay dispositivos emparejados. Empareja primero el Vgate desde Ajustes de Android.",55,310,22,muted,Paint.Align.LEFT,false);
+            float y=275;
+            for(BluetoothDevice d:devices){
+                RectF rr=new RectF(X(55),X(y),X(1745),X(y+88)); deviceRects.add(rr); deviceHits.add(d);
+                round(c,55,y,1745,y+88,15,panel2); outline(c,55,y,1745,y+88,15,border,1);
+                String name=safeName(d); txt(c,name,85,y+36,24,white,Paint.Align.LEFT,true);
+                txt(c,d.getAddress(),85,y+67,17,muted,Paint.Align.LEFT,false);
+                txt(c,obd.connected && d.getAddress().equals(obd.deviceAddress)?"CONECTADO":"CONECTAR",1690,y+53,20,obd.connected&&d.getAddress().equals(obd.deviceAddress)?green:accent,Paint.Align.RIGHT,true);
+                y+=103; if(y>650) break;
+            }
+            if(obd.connected){ txt(c,"Toca el dispositivo conectado para desconectar.",55,690,18,muted,Paint.Align.LEFT,false); }
         }
 
-        synchronized void connect(final BluetoothDevice device) {
-            if (connecting) return;
-            disconnect();
-            connecting = true; demoMode = false; stop = false; statusMessage = "Conectando...";
-            worker = new Thread(() -> {
-                try {
-                    if (!activity.hasBluetoothPermission()) throw new SecurityException("Bluetooth sin permiso");
-                    BluetoothAdapter adapter = BluetoothAdapter.getDefaultAdapter();
-                    if (adapter == null || !adapter.isEnabled()) throw new Exception("Bluetooth desactivado");
-                    try { adapter.cancelDiscovery(); } catch (Exception ignored) {}
-                    socket = device.createRfcommSocketToServiceRecord(SPP);
-                    socket.connect();
-                    input = socket.getInputStream(); output = socket.getOutputStream();
-                    try { deviceName = device.getName(); } catch (Exception e) { deviceName = "OBD"; }
-                    initElm();
-                    connected = true; connecting = false; statusMessage = "OBD conectado"; lastLoop = System.currentTimeMillis();
-                    while (!stop && socket != null && socket.isConnected()) {
-                        if (requestClearDtc) { requestClearDtc = false; command("04", 2200); data.dtcs = new String[0]; }
-                        if (requestDtc) { requestDtc = false; data.dtcs = parseDtcs(command("03", 2500)); }
-                        poll();
-                    }
-                } catch (Exception e) {
-                    statusMessage = "Sin conexión: " + shortMessage(e.getMessage());
-                } finally {
-                    connected = false; connecting = false; closeSocket();
+        private List<BluetoothDevice> getBonded(){
+            List<BluetoothDevice> out=new ArrayList<>();
+            try{ BluetoothAdapter a=BluetoothAdapter.getDefaultAdapter(); if(a!=null){ Set<BluetoothDevice> set=a.getBondedDevices(); out.addAll(set); } }catch(SecurityException ignored){}
+            return out;
+        }
+        private String safeName(BluetoothDevice d){ try{String n=d.getName(); return n==null?"Dispositivo OBD":n;}catch(Exception e){return "Dispositivo OBD";} }
+
+        private void drawSettings(Canvas c){
+            txt(c,"Personalización",30,118,27,white,Paint.Align.LEFT,true);
+            round(c,23,140,1778,720,20,panel); outline(c,23,140,1778,720,20,border,1);
+            txt(c,"Color principal",55,195,25,white,Paint.Align.LEFT,true);
+            txt(c,"Elige el color del cuadro, relojes, iconos y menú activo.",55,227,18,muted,Paint.Align.LEFT,false);
+            colorRects.clear();
+            float startX=60,startY=275,cellW=270,cellH=110,gap=18;
+            for(int i=0;i<themeColors.length;i++){
+                int row=i/6,col=i%6; float l=startX+col*(cellW+gap), t=startY+row*(cellH+25);
+                RectF rr=new RectF(X(l),X(t),X(l+cellW),X(t+cellH)); colorRects.add(rr);
+                round(c,l,t,l+cellW,t+cellH,16,panel2); outline(c,l,t,l+cellW,t+cellH,16,themeColors[i]==accent?white:border,themeColors[i]==accent?2.5f:1);
+                p.setStyle(Paint.Style.FILL);p.setColor(themeColors[i]);c.drawCircle(X(l+42),X(t+45),X(20),p);
+                txt(c,themeNames[i],l+78,t+52,19,white,Paint.Align.LEFT,true);
+            }
+            txt(c,"Tipo de combustible",55,587,24,white,Paint.Align.LEFT,true);
+            txt(c,"Se usa solo si la ECU no ofrece caudal de combustible y hay que estimarlo con el MAF.",55,617,17,muted,Paint.Align.LEFT,false);
+            fuelToggleRect.set(X(55),X(642),X(560),X(700));
+            round(c,55,642,560,700,16,panel2); outline(c,55,642,560,700,16,accent,1.5f);
+            txt(c,diesel?"DIÉSEL":"GASOLINA",307,680,21,accent,Paint.Align.CENTER,true);
+        }
+
+        @Override public boolean onTouchEvent(MotionEvent e){
+            if(e.getAction()!=MotionEvent.ACTION_UP) return true;
+            float ox=(getWidth()-1800*s)/2f, oy=(getHeight()-900*s)/2f;
+            float x=e.getX()-ox,y=e.getY()-oy;
+            if(gearRect.contains(x,y)){ page=5; invalidate(); return true; }
+            if(obdRect.contains(x,y)){ page=4; invalidate(); return true; }
+            if(y>=X(760)){
+                float dx=x/s; int idx=(int)(dx/450f); if(idx<0)idx=0;if(idx>3)idx=3; page=idx; invalidate(); return true;
+            }
+            if(page==1 && resetTripRect.contains(x,y)){ obd.resetTrip(); invalidate(); return true; }
+            if(page==3 && readDtcRect.contains(x,y)){ obd.readDtcs(); return true; }
+            if(page==3 && clearDtcRect.contains(x,y)){ obd.clearDtcs(); return true; }
+            if(page==4){
+                if(!hasBluetoothPermission()){ ensureBluetoothPermission(); return true; }
+                for(int i=0;i<deviceRects.size();i++) if(deviceRects.get(i).contains(x,y)){
+                    BluetoothDevice d=deviceHits.get(i);
+                    if(obd.connected && d.getAddress().equals(obd.deviceAddress)) obd.disconnect(); else obd.connect(d);
+                    invalidate(); return true;
                 }
-            }, "OBD-Worker");
-            worker.start();
-        }
-
-        private String shortMessage(String s) {
-            if (s == null || s.trim().isEmpty()) return "comprueba el adaptador";
-            return s.length() > 38 ? s.substring(0, 38) : s;
-        }
-
-        void disconnect() { stop = true; connected = false; connecting = false; closeSocket(); }
-
-        private synchronized void closeSocket() {
-            try { if (input != null) input.close(); } catch (Exception ignored) {}
-            try { if (output != null) output.close(); } catch (Exception ignored) {}
-            try { if (socket != null) socket.close(); } catch (Exception ignored) {}
-            input = null; output = null; socket = null;
-        }
-
-        private void initElm() throws Exception {
-            command("ATZ", 3000); sleep(450); command("ATE0", 1200); command("ATL0", 1200); command("ATS0", 1200);
-            command("ATH0", 1200); command("ATAT1", 1200); command("ATSP0", 3000);
-            data.protocol = cleanText(command("ATDP", 1800));
-        }
-
-        private void poll() throws Exception {
-            long now = System.currentTimeMillis();
-            float dtHours = lastLoop == 0 ? 0 : (now - lastLoop) / 3600000f; lastLoop = now;
-            Float rpm = pid2("010C", 12, 4f), speed = pid1("010D", 13, 1f, 0f), coolant = pid1("0105", 5, 1f, -40f);
-            Float load = pid1("0104", 4, 100f / 255f, 0f), voltage = pid2("0142", 66, 1000f), maf = pid2("0110", 16, 100f);
-            Float iat = pid1("010F", 15, 1f, -40f), map = pid1("010B", 11, 1f, 0f), ambient = pid1("0146", 70, 1f, -40f);
-            Float throttle = pid1("0111", 17, 100f / 255f, 0f), fuelRate = pid2("015E", 94, 20f);
-            if (rpm != null) data.rpm = rpm; if (speed != null) data.speed = speed; if (coolant != null) data.coolant = coolant;
-            if (load != null) data.load = load; if (voltage != null) data.voltage = voltage; if (maf != null) data.maf = maf;
-            if (iat != null) data.intakeTemp = iat; if (map != null) data.map = map; if (ambient != null) data.ambient = ambient; if (throttle != null) data.throttle = throttle;
-            if (fuelRate != null && fuelRate >= 0f) { data.fuelRate = fuelRate; data.fuelRateDirect = true; }
-            else if (maf != null && maf > 0f) {
-                float afr = diesel ? 14.5f : 14.7f, density = diesel ? 832f : 745f;
-                data.fuelRate = maf * 3600f / (afr * density); data.fuelRateDirect = false;
             }
-            if ((!Float.isFinite(data.voltage) || data.voltage < 5f) && loopCount % 8 == 0) {
-                Float v = parseVoltageText(command("ATRV", 1000)); if (v != null) data.voltage = v;
+            if(page==5){
+                for(int i=0;i<colorRects.size();i++) if(colorRects.get(i).contains(x,y)){ setAccent(themeColors[i]); return true; }
+                if(fuelToggleRect.contains(x,y)){ diesel=!diesel; prefs.edit().putBoolean("diesel",diesel).apply(); invalidate(); return true; }
             }
-            if (Float.isFinite(data.speed) && data.speed > 3f && Float.isFinite(data.fuelRate)) data.instantConsumption = data.fuelRate / data.speed * 100f;
-            else if (Float.isFinite(data.speed) && data.speed <= 3f) data.instantConsumption = Float.NaN;
-            if (dtHours > 0 && dtHours < 0.01f && Float.isFinite(data.rpm) && data.rpm > 300f) {
-                data.tripMillis += (long)(dtHours * 3600000f);
-                if (Float.isFinite(data.speed)) { data.tripKm += data.speed * dtHours; if (data.speed > data.maxSpeed) data.maxSpeed = data.speed; }
-                if (Float.isFinite(data.fuelRate) && data.fuelRate >= 0) data.tripFuel += data.fuelRate * dtHours;
-                if (data.tripKm > 0.15f) data.avgConsumption = data.tripFuel / data.tripKm * 100f;
+            return true;
+        }
+
+        // --- vector icons ---
+        private void drawCarIcon(Canvas c,float x,float y,float size,int col){
+            stroke.setColor(col);stroke.setStrokeWidth(X(3));stroke.setStyle(Paint.Style.STROKE);
+            RectF body=new RectF(X(x),X(y+12),X(x+size),X(y+31)); c.drawRoundRect(body,X(6),X(6),stroke);
+            line(c,x+8,y+12,x+14,y+3,col,3); line(c,x+14,y+3,x+31,y+3,col,3); line(c,x+31,y+3,x+37,y+12,col,3);
+            p.setColor(col);p.setStyle(Paint.Style.FILL);c.drawCircle(X(x+9),X(y+33),X(4),p);c.drawCircle(X(x+33),X(y+33),X(4),p);
+        }
+        private void drawFuelIcon(Canvas c,float x,float y,float z,int col){
+            stroke.setColor(col);stroke.setStrokeWidth(X(3));stroke.setStyle(Paint.Style.STROKE);c.drawRect(X(x),X(y),X(x+z*0.55f),X(y+z),stroke);
+            line(c,x+z*.55f,y+z*.15f,x+z*.78f,y+z*.27f,col,3);line(c,x+z*.78f,y+z*.27f,x+z*.78f,y+z*.78f,col,3);
+        }
+        private void drawThermometer(Canvas c,float x,float y,float z,int col){
+            stroke.setColor(col);stroke.setStrokeWidth(X(3));stroke.setStyle(Paint.Style.STROKE);c.drawCircle(X(x+z*.35f),X(y+z*.8f),X(z*.18f),stroke);line(c,x+z*.35f,y,x+z*.35f,y+z*.65f,col,3);line(c,x+z*.35f,y+z*.25f,x+z*.65f,y+z*.25f,col,2);
+        }
+        private void drawBattery(Canvas c,float x,float y,float z,int col){
+            stroke.setColor(col);stroke.setStrokeWidth(X(3));stroke.setStyle(Paint.Style.STROKE);c.drawRect(X(x),X(y),X(x+z),X(y+z*.62f),stroke);line(c,x+z*.25f,y-4,x+z*.38f,y-4,col,3);line(c,x+z*.62f,y-4,x+z*.76f,y-4,col,3);line(c,x+z*.5f,y+z*.12f,x+z*.5f,y+z*.48f,col,2);line(c,x+z*.34f,y+z*.3f,x+z*.66f,y+z*.3f,col,2);
+        }
+        private void drawEngineIcon(Canvas c,float x,float y,float z,int col){
+            stroke.setColor(col);stroke.setStrokeWidth(X(3));stroke.setStyle(Paint.Style.STROKE);RectF r=new RectF(X(x+5),X(y+7),X(x+z-4),X(y+z*.65f));c.drawRoundRect(r,X(5),X(5),stroke);line(c,x+z*.28f,y+7,x+z*.36f,y,col,3);line(c,x+z*.36f,y,x+z*.62f,y,col,3);line(c,x+z*.75f,y+14,x+z,y+14,col,3);line(c,x+5,y+z*.3f,x-3,y+z*.3f,col,3);
+        }
+        private void drawRoad(Canvas c,float x,float y,float z,int col){
+            line(c,x+z*.25f,y,x,y+z,col,3);line(c,x+z*.75f,y,x+z,y+z,col,3);line(c,x+z*.5f,y+5,x+z*.5f,y+14,col,2);line(c,x+z*.5f,y+23,x+z*.5f,y+32,col,2);
+        }
+        private void drawClock(Canvas c,float x,float y,float z,int col){
+            stroke.setColor(col);stroke.setStrokeWidth(X(3));stroke.setStyle(Paint.Style.STROKE);c.drawCircle(X(x+z/2),X(y+z/2),X(z/2),stroke);line(c,x+z/2,y+z/2,x+z/2,y+z*.2f,col,3);line(c,x+z/2,y+z/2,x+z*.73f,y+z*.62f,col,3);
+        }
+        private void drawHomeIcon(Canvas c,float x,float y,float z,int col){
+            Path path=new Path();path.moveTo(X(x-z),X(y));path.lineTo(X(x),X(y-z));path.lineTo(X(x+z),X(y));path.lineTo(X(x+z*.7f),X(y));path.lineTo(X(x+z*.7f),X(y+z));path.lineTo(X(x-z*.7f),X(y+z));path.lineTo(X(x-z*.7f),X(y));path.close();stroke.setColor(col);stroke.setStrokeWidth(X(2.5f));stroke.setStyle(Paint.Style.STROKE);c.drawPath(path,stroke);
+        }
+        private void drawTripIcon(Canvas c,float x,float y,float z,int col){ line(c,x-z,y+z,x+z,y-z,col,2.5f);line(c,x+z*.45f,y-z,x+z,y-z,col,2.5f);line(c,x+z,y-z,x+z,y-z*.45f,col,2.5f); }
+        private void drawWarning(Canvas c,float x,float y,float z,int col){ Path path=new Path();path.moveTo(X(x),X(y-z));path.lineTo(X(x+z),X(y+z));path.lineTo(X(x-z),X(y+z));path.close();stroke.setColor(col);stroke.setStrokeWidth(X(2.5f));stroke.setStyle(Paint.Style.STROKE);c.drawPath(path,stroke);line(c,x,y-7,x,y+5,col,2.5f);p.setColor(col);p.setStyle(Paint.Style.FILL);c.drawCircle(X(x),X(y+11),X(2),p); }
+        private void drawGear(Canvas c,float x,float y,float z,int col){ stroke.setColor(col);stroke.setStrokeWidth(X(2.5f));stroke.setStyle(Paint.Style.STROKE);c.drawCircle(X(x),X(y),X(z),stroke);c.drawCircle(X(x),X(y),X(z*.38f),stroke);for(int i=0;i<8;i++){double a=i*Math.PI/4;line(c,x+(float)Math.cos(a)*z,y+(float)Math.sin(a)*z,x+(float)Math.cos(a)*(z+5),y+(float)Math.sin(a)*(z+5),col,2.5f);} }
+
+        // --- real Bluetooth Classic ELM327 layer ---
+        private class ObdManager {
+            volatile boolean connected=false, connecting=false;
+            volatile String deviceName="", deviceAddress="";
+            volatile int rpm=0,speed=0;
+            volatile float coolant=0,voltage=0,load=0,maf=0,intake=0,map=0,throttle=0,ambient=Float.NaN;
+            volatile float fuelRate=0,currentCons=0,avgCons=0,avgSpeed=0,maxSpeed=0;
+            volatile double tripKm=0,tripFuel=0;
+            volatile long tripSeconds=0;
+            final List<String> dtcs=new ArrayList<>();
+            BluetoothSocket socket; InputStream in; OutputStream out; Thread pollThread; long tripStart=System.currentTimeMillis(); long lastPoll=System.currentTimeMillis();
+            final UUID SPP=UUID.fromString("00001101-0000-1000-8000-00805F9B34FB");
+
+            void connect(final BluetoothDevice d){
+                if(connecting)return; disconnect(); connecting=true; invalidate();
+                new Thread(() -> {
+                    try{
+                        if(!hasBluetoothPermission()) throw new SecurityException("Permiso Bluetooth");
+                        BluetoothAdapter a=BluetoothAdapter.getDefaultAdapter(); if(a!=null)a.cancelDiscovery();
+                        socket=d.createRfcommSocketToServiceRecord(SPP); socket.connect(); in=socket.getInputStream(); out=socket.getOutputStream();
+                        send("ATZ",3500); send("ATE0",1500); send("ATL0",1200); send("ATS0",1200); send("ATH0",1200); send("ATSP0",2500);
+                        connected=true; connecting=false; deviceName=safeName(d); deviceAddress=d.getAddress(); tripStart=System.currentTimeMillis(); lastPoll=tripStart;
+                        startPolling();
+                    }catch(Exception ex){ connected=false; connecting=false; closeSocket(); }
+                    postInvalidate();
+                }).start();
             }
-            data.lastUpdate = now; loopCount++; sleep(70);
-        }
-
-        private Float pid1(String cmd, int pid, float factor, float offset) throws Exception {
-            int[] b = payload(command(cmd, 900), pid, 1); return b == null ? null : b[0] * factor + offset;
-        }
-        private Float pid2(String cmd, int pid, float divisor) throws Exception {
-            int[] b = payload(command(cmd, 900), pid, 2); return b == null ? null : (b[0] * 256f + b[1]) / divisor;
-        }
-        private int[] payload(String response, int pid, int count) {
-            if (response == null) return null;
-            String clean = response.toUpperCase(Locale.ROOT).replaceAll("[^0-9A-F]", "");
-            String prefix = String.format(Locale.ROOT, "41%02X", pid); int at = clean.indexOf(prefix), start = at + 4;
-            if (at < 0 || clean.length() < start + count * 2) return null;
-            int[] out = new int[count];
-            try { for (int i=0;i<count;i++) out[i] = Integer.parseInt(clean.substring(start+i*2,start+i*2+2),16); return out; } catch(Exception e){ return null; }
-        }
-        private Float parseVoltageText(String r) {
-            if (r == null) return null;
-            String[] parts = r.toUpperCase(Locale.ROOT).replace("V"," ").replace(">"," ").trim().split("[^0-9.]+");
-            for(String q:parts) try { float v=Float.parseFloat(q); if(v>5&&v<20)return v; } catch(Exception ignored){}
-            return null;
-        }
-        private String[] parseDtcs(String response) {
-            ArrayList<String> codes = new ArrayList<>(); if(response==null)return new String[0];
-            String clean=response.toUpperCase(Locale.ROOT).replaceAll("[^0-9A-F]",""); int at=clean.indexOf("43"); if(at<0)return new String[0];
-            String q=clean.substring(at+2);
-            for(int i=0;i+4<=q.length()&&codes.size()<12;i+=4){ String h=q.substring(i,i+4); if("0000".equals(h))continue;
-                try{ int a=Integer.parseInt(h.substring(0,2),16),b=Integer.parseInt(h.substring(2,4),16); char type="PCBU".charAt((a>>6)&3);
-                    codes.add(""+type+((a>>4)&3)+Integer.toHexString(a&15).toUpperCase(Locale.ROOT)+String.format(Locale.ROOT,"%02X",b)); }catch(Exception ignored){}
+            void disconnect(){ connected=false; connecting=false; if(pollThread!=null)pollThread.interrupt(); closeSocket(); postInvalidate(); }
+            void closeSocket(){ try{if(in!=null)in.close();}catch(Exception ignored){}try{if(out!=null)out.close();}catch(Exception ignored){}try{if(socket!=null)socket.close();}catch(Exception ignored){} in=null;out=null;socket=null; }
+            synchronized String send(String cmd,long timeout) throws Exception{
+                if(out==null||in==null)throw new Exception("Sin conexión");
+                while(in.available()>0)in.read(); out.write((cmd+"\r").getBytes()); out.flush();
+                StringBuilder sb=new StringBuilder(); long end=System.currentTimeMillis()+timeout;
+                while(System.currentTimeMillis()<end){ while(in.available()>0){ int b=in.read(); if(b<0)break; char ch=(char)b; sb.append(ch); if(ch=='>')return sb.toString(); } Thread.sleep(12); }
+                return sb.toString();
             }
-            return codes.toArray(new String[0]);
+            String q(String cmd){ try{return send(cmd,1800);}catch(Exception e){return "";} }
+            String clean(String r){ return r==null?"":r.toUpperCase(Locale.US).replace("SEARCHING...","").replace(" ","").replace("\r","").replace("\n","").replace(">',","").replace(">",""); }
+            int[] bytesFor(String raw,String pid,int n){
+                String x=clean(raw); String key="41"+pid; int k=x.indexOf(key); if(k<0)return null; k+=key.length(); if(k+n*2>x.length())return null; int[] a=new int[n];
+                try{for(int i=0;i<n;i++)a[i]=Integer.parseInt(x.substring(k+i*2,k+i*2+2),16);return a;}catch(Exception e){return null;}
+            }
+            float pid1(String cmd,String pid,float mul,float add){ int[] a=bytesFor(q(cmd),pid,1);return a==null?Float.NaN:a[0]*mul+add; }
+            void startPolling(){
+                pollThread=new Thread(() -> {
+                    int cycle=0;
+                    while(connected&&!Thread.currentThread().isInterrupted()){
+                        try{
+                            int[] rr=bytesFor(q("010C"),"0C",2); if(rr!=null)rpm=(rr[0]*256+rr[1])/4;
+                            int[] ss=bytesFor(q("010D"),"0D",1); if(ss!=null)speed=ss[0];
+                            float v=pid1("0105","05",1,-40); if(!Float.isNaN(v))coolant=v;
+                            v=pid1("0104","04",100f/255f,0); if(!Float.isNaN(v))load=v;
+                            String vr=q("ATRV").toUpperCase(Locale.US).replace("V","").replace(">","").trim(); try{String[] z=vr.split("\\s+");voltage=Float.parseFloat(z[z.length-1]);}catch(Exception ignored){}
+                            if(cycle%2==0){
+                                int[] mm=bytesFor(q("0110"),"10",2); if(mm!=null)maf=(mm[0]*256+mm[1])/100f;
+                                v=pid1("010F","0F",1,-40);if(!Float.isNaN(v))intake=v;
+                                v=pid1("010B","0B",1,0);if(!Float.isNaN(v))map=v;
+                                v=pid1("0111","11",100f/255f,0);if(!Float.isNaN(v))throttle=v;
+                                v=pid1("0146","46",1,-40);if(!Float.isNaN(v))ambient=v;
+                            }
+                            if(cycle%3==0){ int[] fr=bytesFor(q("015E"),"5E",2); if(fr!=null)fuelRate=(fr[0]*256+fr[1])*0.05f; else if(maf>0)fuelRate=estimateFuel(maf); }
+                            updateTrip(); cycle++; postInvalidate(); Thread.sleep(250);
+                        }catch(Exception e){ connected=false; closeSocket(); postInvalidate(); break; }
+                    }
+                }); pollThread.start();
+            }
+            float estimateFuel(float mafGps){ float afr=diesel?14.5f:14.7f; float density=diesel?832f:745f; return mafGps*3600f/(afr*density); }
+            void updateTrip(){
+                long now=System.currentTimeMillis(); double dh=(now-lastPoll)/3600000.0; lastPoll=now; if(dh<0||dh>0.01)return;
+                tripKm+=speed*dh; tripFuel+=Math.max(0,fuelRate)*dh; tripSeconds=(now-tripStart)/1000;
+                if(speed>2 && fuelRate>0)currentCons=(float)(fuelRate/speed*100.0); else currentCons=0;
+                if(tripKm>0.05)avgCons=(float)(tripFuel/tripKm*100.0);
+                double hours=Math.max(0.0001,tripSeconds/3600.0);avgSpeed=(float)(tripKm/hours);if(speed>maxSpeed)maxSpeed=speed;
+            }
+            void resetTrip(){ tripKm=0;tripFuel=0;tripSeconds=0;avgCons=0;avgSpeed=0;maxSpeed=0;tripStart=System.currentTimeMillis();lastPoll=tripStart; }
+            void readDtcs(){ if(!connected){postInvalidate();return;} new Thread(() -> { try{String r=clean(send("03",2500)); List<String> list=parseDtcs(r); synchronized(dtcs){dtcs.clear();dtcs.addAll(list);} }catch(Exception ignored){} postInvalidate(); }).start(); }
+            void clearDtcs(){ if(!connected)return; new Thread(() -> { try{send("04",2500); synchronized(dtcs){dtcs.clear();}}catch(Exception ignored){} postInvalidate(); }).start(); }
+            List<String> parseDtcs(String r){
+                List<String> list=new ArrayList<>(); int k=r.indexOf("43"); if(k<0)return list; String d=r.substring(k+2);
+                for(int i=0;i+4<=d.length();i+=4){String code=d.substring(i,i+4);if(code.equals("0000"))continue;try{int a=Integer.parseInt(code.substring(0,2),16),b=Integer.parseInt(code.substring(2,4),16);String letters="PCBU";char pre=letters.charAt((a>>6)&3);int d1=(a>>4)&3,d2=a&15,d3=(b>>4)&15,d4=b&15;list.add(""+pre+d1+Integer.toHexString(d2).toUpperCase()+Integer.toHexString(d3).toUpperCase()+Integer.toHexString(d4).toUpperCase());}catch(Exception ignored){}
+                }return list;
+            }
         }
-        private String cleanText(String r){ return r==null?"":r.replace(">","").replace("\r"," ").replace("\n"," ").replaceAll("\\s+"," ").trim(); }
-        private String command(String cmd,long timeoutMs)throws Exception{
-            if(output==null||input==null)throw new Exception("sin canal OBD"); while(input.available()>0)input.read();
-            output.write((cmd+"\r").getBytes(StandardCharsets.US_ASCII)); output.flush(); StringBuilder sb=new StringBuilder(); long end=System.currentTimeMillis()+timeoutMs;
-            while(System.currentTimeMillis()<end){ if(input.available()>0){ int ch=input.read(); if(ch<0)break; char c=(char)ch; if(c=='>')break; sb.append(c);}else sleep(8); }
-            String r=sb.toString(); if(r.toUpperCase(Locale.ROOT).contains("UNABLE TO CONNECT"))throw new Exception("ECU no responde"); return r;
-        }
-        void requestReadDtcs(){requestDtc=true;} void requestClearDtcs(){requestClearDtc=true;}
-        void resetTrip(){data.tripKm=0f;data.tripFuel=0f;data.avgConsumption=Float.NaN;data.maxSpeed=0f;data.tripMillis=0L;}
-        private void sleep(long ms){try{Thread.sleep(ms);}catch(InterruptedException ignored){}}
-    }
-
-    static class DashboardView extends View {
-        private final MainActivity activity; private final ObdManager obd; private final Paint p=new Paint(Paint.ANTI_ALIAS_FLAG);
-        private float s=1f; private int page=0,demoTick=0; private String toast=""; private long toastUntil=0;
-        private final RectF statusRect=new RectF(),primaryRect=new RectF(),secondaryRect=new RectF(),fuelTypeRect=new RectF();
-        private final RectF[] deviceRects={new RectF(),new RectF(),new RectF(),new RectF()};
-        private final int BG=Color.rgb(5,7,9),PANEL=Color.rgb(13,17,20),PANEL2=Color.rgb(18,23,27),BORDER=Color.rgb(42,48,52);
-        private final int ORANGE=Color.rgb(255,132,0),AMBER=Color.rgb(255,177,0),YELLOW=Color.rgb(255,204,41),WHITE=Color.rgb(247,248,249);
-        private final int MUTED=Color.rgb(160,168,174),GREEN=Color.rgb(84,222,121),RED=Color.rgb(255,85,63);
-
-        DashboardView(MainActivity a,ObdManager manager){super(a);activity=a;obd=manager;setBackgroundColor(BG);postDelayed(new Runnable(){@Override public void run(){demoTick++;invalidate();postDelayed(this,700);}},700);}
-        private void text(Canvas c,String t,float x,float y,float size,int color,Paint.Align align,boolean bold){p.setShader(null);p.setStyle(Paint.Style.FILL);p.setColor(color);p.setTextAlign(align);p.setTextSize(size*s);p.setTypeface(bold?android.graphics.Typeface.DEFAULT_BOLD:android.graphics.Typeface.DEFAULT);c.drawText(t,x,y,p);}
-        private void fillRound(Canvas c,float l,float t,float r,float b,float radius,int color){p.setShader(null);p.setStyle(Paint.Style.FILL);p.setColor(color);c.drawRoundRect(new RectF(l,t,r,b),radius*s,radius*s,p);}
-        private void strokeRound(Canvas c,float l,float t,float r,float b,float radius,int color,float width){p.setShader(null);p.setStyle(Paint.Style.STROKE);p.setStrokeWidth(width*s);p.setColor(color);c.drawRoundRect(new RectF(l,t,r,b),radius*s,radius*s,p);}
-        private void gradientRound(Canvas c,float l,float t,float r,float b,float radius,int a,int bc){p.setStyle(Paint.Style.FILL);p.setShader(new LinearGradient(l,t,r,b,a,bc,Shader.TileMode.CLAMP));c.drawRoundRect(new RectF(l,t,r,b),radius*s,radius*s,p);p.setShader(null);}
-        private void line(Canvas c,float x1,float y1,float x2,float y2,int color,float width){p.setShader(null);p.setStyle(Paint.Style.STROKE);p.setStrokeWidth(width*s);p.setColor(color);c.drawLine(x1,y1,x2,y2,p);}
-        private boolean live(){return obd.connected;} private boolean demo(){return !live()&&obd.demoMode;}
-        private float demoRpm(){return 2150+(float)Math.sin(demoTick/3.0)*80f;} private float demoSpeed(){return 87+(float)Math.sin(demoTick/4.0)*2f;}
-        private float value(float real,float dv){return live()&&Float.isFinite(real)?real:demo()?dv:Float.NaN;}
-        private String n(float v,int d){if(!Float.isFinite(v))return "--";return d==0?String.format(Locale.getDefault(),"%.0f",v):String.format(Locale.getDefault(),"%."+d+"f",v);}
-        private String time(long ms){long total=ms/1000L,h=total/3600L,m=(total%3600L)/60L;return h>0?h+" h "+m+" min":m+" min";}
-
-        @Override protected void onDraw(Canvas c){super.onDraw(c);float w=getWidth(),h=getHeight();s=Math.max(0.64f,Math.min(w/1600f,h/900f));c.drawColor(BG);drawHeader(c,w);if(page==0)drawHome(c,w,h);else if(page==1)drawTrip(c,w,h);else if(page==2)drawEngine(c,w,h);else if(page==3)drawErrors(c,w,h);else drawConnection(c,w,h);drawNav(c,w,h);drawToast(c,w,h);}
-
-        private void drawHeader(Canvas c,float w){float m=26*s;p.setStyle(Paint.Style.STROKE);p.setStrokeWidth(3*s);p.setColor(AMBER);c.drawRoundRect(new RectF(m,30*s,m+46*s,59*s),8*s,8*s,p);c.drawCircle(m+11*s,60*s,5*s,p);c.drawCircle(m+36*s,60*s,5*s,p);text(c,"Car Monitor",m+62*s,56*s,31,WHITE,Paint.Align.LEFT,true);
-            String status;int sc;if(obd.connected){status="OBD CONECTADO";sc=GREEN;}else if(obd.connecting){status="CONECTANDO...";sc=YELLOW;}else{status="OBD DESCONECTADO";sc=RED;}
-            statusRect.set(w-560*s,25*s,w-310*s,70*s);fillRound(c,statusRect.left,statusRect.top,statusRect.right,statusRect.bottom,22,PANEL2);strokeRound(c,statusRect.left,statusRect.top,statusRect.right,statusRect.bottom,22,sc,1.5f);p.setStyle(Paint.Style.FILL);p.setColor(sc);c.drawCircle(statusRect.left+20*s,47*s,5*s,p);text(c,status,statusRect.left+36*s,55*s,18,WHITE,Paint.Align.LEFT,true);
-            float amb=value(obd.data.ambient,27f);text(c,n(amb,0)+"°C",w-250*s,55*s,28,YELLOW,Paint.Align.RIGHT,true);text(c,"exterior",w-240*s,55*s,18,MUTED,Paint.Align.LEFT,false);text(c,new SimpleDateFormat("HH:mm",Locale.getDefault()).format(new Date()),w-26*s,55*s,27,WHITE,Paint.Align.RIGHT,true);line(c,26*s,90*s,w-26*s,90*s,BORDER,1);}
-
-        private void drawHome(Canvas c,float w,float h){float m=26*s,top=112*s,navTop=h-86*s,gap=14*s,rightW=330*s,mainR=w-m-rightW-gap,gaugeBottom=top+330*s;gradientRound(c,m,top,mainR,gaugeBottom,20,Color.rgb(16,21,24),Color.rgb(9,12,14));strokeRound(c,m,top,mainR,gaugeBottom,20,BORDER,1);float mid=(m+mainR)/2f,r=142*s;float rpm=value(obd.data.rpm,demoRpm()),speed=value(obd.data.speed,demoSpeed());drawGauge(c,m+(mainR-m)*0.28f,top+166*s,r,0,7000,rpm,n(rpm,0),"RPM",true);drawGauge(c,m+(mainR-m)*0.72f,top+166*s,r,0,220,speed,n(speed,0),"km/h",false);line(c,mid,top+30*s,mid,gaugeBottom-30*s,BORDER,1);
-            float rx=mainR+gap,cardH=(gaugeBottom-top-gap)/2f;infoCard(c,rx,top,w-m,top+cardH,"fuel","Consumo actual",n(value(obd.data.instantConsumption,6.4f),1),"L/100 km",YELLOW);infoCard(c,rx,top+cardH+gap,w-m,gaugeBottom,"fuel","Consumo medio",n(value(obd.data.avgConsumption,6.8f),1),"L/100 km",AMBER);
-            float y1=gaugeBottom+gap,rowGap=12*s,rowH=(navTop-y1-rowGap*2)/2f,colGap=12*s,colW=(w-2*m-2*colGap)/3f,c1=m,c2=m+colW+colGap,c3=m+2*(colW+colGap);infoCard(c,c1,y1,c1+colW,y1+rowH,"temp","Motor",n(value(obd.data.coolant,89f),0),"°C",ORANGE);infoCard(c,c2,y1,c2+colW,y1+rowH,"battery","Batería",n(value(obd.data.voltage,14.2f),1),"V",GREEN);infoCard(c,c3,y1,c3+colW,y1+rowH,"engine","Carga motor",n(value(obd.data.load,34f),0),"%",AMBER);float y2=y1+rowH+rowGap;infoCard(c,c1,y2,c1+colW,navTop-8*s,"road","Trayecto",n(value(obd.data.tripKm,124.6f),1),"km",WHITE);infoCard(c,c2,y2,c2+colW,navTop-8*s,"clock","Tiempo de viaje",live()?time(obd.data.tripMillis):demo()?"1 h 42 min":"--","",WHITE);String sys=obd.connected?(obd.data.dtcs.length==0?"Sin errores":obd.data.dtcs.length+" errores"):demo()?"Sin errores":"Sin conexión";infoCard(c,c3,y2,c3+colW,navTop-8*s,"obd","Sistema OBD",sys,"",obd.connected&&obd.data.dtcs.length>0?RED:GREEN);}
-
-        private void drawGauge(Canvas c,float cx,float cy,float r,float min,float max,float val,String main,String unit,boolean rpmGauge){p.setStyle(Paint.Style.FILL);p.setColor(Color.rgb(8,11,13));c.drawCircle(cx,cy,r,p);RectF rr=new RectF(cx-r+8*s,cy-r+8*s,cx+r-8*s,cy+r-8*s);p.setStyle(Paint.Style.STROKE);p.setStrokeCap(Paint.Cap.ROUND);p.setStrokeWidth(12*s);p.setColor(Color.rgb(40,45,49));c.drawArc(rr,135,270,false,p);float frac=Float.isFinite(val)?Math.max(0,Math.min(1,(val-min)/(max-min))):0;p.setColor(AMBER);c.drawArc(rr,135,270*frac,false,p);if(rpmGauge){p.setColor(RED);c.drawArc(rr,135+270*0.84f,270*0.16f,false,p);}int ticks=rpmGauge?7:11;for(int i=0;i<=ticks;i++){double a=Math.toRadians(135+270.0*i/ticks);float x1=cx+(float)Math.cos(a)*(r-28*s),y1=cy+(float)Math.sin(a)*(r-28*s),x2=cx+(float)Math.cos(a)*(r-46*s),y2=cy+(float)Math.sin(a)*(r-46*s);line(c,x1,y1,x2,y2,WHITE,2);String lab=rpmGauge?String.valueOf(i):String.valueOf(i*20);text(c,lab,cx+(float)Math.cos(a)*(r-70*s),cy+(float)Math.sin(a)*(r-70*s)+6*s,15,WHITE,Paint.Align.CENTER,false);}text(c,main,cx,cy+8*s,54,WHITE,Paint.Align.CENTER,true);text(c,unit,cx,cy+48*s,21,MUTED,Paint.Align.CENTER,true);if(rpmGauge)text(c,"x1000",cx,cy+76*s,14,MUTED,Paint.Align.CENTER,false);}
-
-        private void infoCard(Canvas c,float l,float t,float r,float b,String icon,String label,String value,String unit,int accent){fillRound(c,l,t,r,b,17,PANEL);strokeRound(c,l,t,r,b,17,BORDER,1);drawIcon(c,icon,l+30*s,(t+b)/2f,accent);text(c,label,l+62*s,t+31*s,18,MUTED,Paint.Align.LEFT,false);float vs=value.length()>12?25:value.length()>8?29:37;text(c,value,l+62*s,b-22*s,vs,accent==GREEN?GREEN:WHITE,Paint.Align.LEFT,true);if(!unit.isEmpty())text(c,unit,r-18*s,b-24*s,18,MUTED,Paint.Align.RIGHT,false);}
-        private void drawIcon(Canvas c,String type,float x,float y,int color){p.setShader(null);p.setColor(color);p.setStrokeWidth(3*s);p.setStyle(Paint.Style.STROKE);if("fuel".equals(type)){c.drawRoundRect(new RectF(x-12*s,y-18*s,x+9*s,y+18*s),3*s,3*s,p);c.drawLine(x+9*s,y-12*s,x+18*s,y-7*s,p);c.drawLine(x+18*s,y-7*s,x+18*s,y+12*s,p);}else if("temp".equals(type)){c.drawCircle(x,y+11*s,7*s,p);c.drawLine(x,y+8*s,x,y-18*s,p);c.drawLine(x+7*s,y-8*s,x+14*s,y-8*s,p);}else if("battery".equals(type)){c.drawRect(x-17*s,y-11*s,x+17*s,y+12*s,p);c.drawLine(x-7*s,y-15*s,x-2*s,y-15*s,p);c.drawLine(x+5*s,y-15*s,x+10*s,y-15*s,p);c.drawLine(x-8*s,y,x-2*s,y,p);c.drawLine(x+6*s,y-4*s,x+6*s,y+4*s,p);c.drawLine(x+2*s,y,x+10*s,y,p);}else if("engine".equals(type)||"obd".equals(type)){c.drawRoundRect(new RectF(x-18*s,y-11*s,x+18*s,y+11*s),4*s,4*s,p);c.drawLine(x-10*s,y-16*s,x+6*s,y-16*s,p);c.drawLine(x+18*s,y-5*s,x+25*s,y-5*s,p);}else if("road".equals(type)){c.drawLine(x-14*s,y+18*s,x-5*s,y-18*s,p);c.drawLine(x+14*s,y+18*s,x+5*s,y-18*s,p);c.drawLine(x,y-13*s,x,y-4*s,p);c.drawLine(x,y+3*s,x,y+12*s,p);}else if("clock".equals(type)){c.drawCircle(x,y,17*s,p);c.drawLine(x,y,x,y-10*s,p);c.drawLine(x,y,x+9*s,y+5*s,p);}}
-
-        private void drawTrip(Canvas c,float w,float h){float m=26*s,top=112*s,navTop=h-86*s,g=14*s,left=w*0.43f;gradientRound(c,m,top,left,navTop-8*s,20,Color.rgb(16,21,24),Color.rgb(9,12,14));strokeRound(c,m,top,left,navTop-8*s,20,BORDER,1);text(c,"VIAJE ACTUAL",m+30*s,top+42*s,21,MUTED,Paint.Align.LEFT,true);text(c,n(value(obd.data.tripKm,124.6f),1),m+30*s,top+135*s,78,WHITE,Paint.Align.LEFT,true);text(c,"km",m+270*s,top+128*s,28,YELLOW,Paint.Align.LEFT,true);text(c,live()?time(obd.data.tripMillis):demo()?"1 h 42 min":"--",m+30*s,top+200*s,31,WHITE,Paint.Align.LEFT,true);text(c,"tiempo en marcha",m+30*s,top+232*s,18,MUTED,Paint.Align.LEFT,false);line(c,m+30*s,top+270*s,left-30*s,top+270*s,BORDER,1);text(c,n(value(obd.data.avgConsumption,6.8f),1),m+30*s,top+354*s,58,YELLOW,Paint.Align.LEFT,true);text(c,"L/100 km  MEDIA",m+168*s,top+347*s,20,MUTED,Paint.Align.LEFT,true);float avg=live()&&obd.data.tripMillis>1000?obd.data.tripKm/(obd.data.tripMillis/3600000f):demo()?73f:Float.NaN;text(c,n(avg,0)+" km/h",m+30*s,top+420*s,30,WHITE,Paint.Align.LEFT,true);text(c,"velocidad media",m+30*s,top+450*s,18,MUTED,Paint.Align.LEFT,false);float rL=left+g,rR=w-m,cardW=(rR-rL-g)/2f,cardH=145*s;infoCard(c,rL,top,rL+cardW,top+cardH,"fuel","Combustible",n(value(obd.data.tripFuel,8.5f),1),"L",YELLOW);infoCard(c,rL+cardW+g,top,rR,top+cardH,"road","Velocidad máx.",n(value(obd.data.maxSpeed,112f),0),"km/h",ORANGE);infoCard(c,rL,top+cardH+g,rL+cardW,top+2*cardH+g,"clock","Tiempo viaje",live()?time(obd.data.tripMillis):demo()?"1 h 42 min":"--","",WHITE);infoCard(c,rL+cardW+g,top+cardH+g,rR,top+2*cardH+g,"fuel","Consumo medio",n(value(obd.data.avgConsumption,6.8f),1),"L/100 km",AMBER);float bt=top+2*cardH+g*2;primaryRect.set(rL,bt,rR,navTop-8*s);fillRound(c,rL,bt,rR,navTop-8*s,17,Color.rgb(45,34,5));strokeRound(c,rL,bt,rR,navTop-8*s,17,YELLOW,1.5f);text(c,"REINICIAR VIAJE",(rL+rR)/2f,bt+(navTop-8*s-bt)*0.55f,25,YELLOW,Paint.Align.CENTER,true);}
-
-        private void drawEngine(Canvas c,float w,float h){float m=26*s,top=112*s,navTop=h-86*s,g=14*s,cardW=(w-2*m-2*g)/3f,cardH=(navTop-top-g*2-8*s)/3f;String[] labels={"Temperatura motor","Voltaje batería","Carga motor","Caudal MAF","Temp. admisión","Presión MAP","Acelerador","Consumo/h","Protocolo"};String[] vals={n(value(obd.data.coolant,89f),0),n(value(obd.data.voltage,14.2f),1),n(value(obd.data.load,34f),0),n(value(obd.data.maf,18.4f),1),n(value(obd.data.intakeTemp,31f),0),n(value(obd.data.map,102f),0),n(value(obd.data.throttle,22f),0),n(value(obd.data.fuelRate,5.6f),1),obd.connected?(obd.data.protocol.isEmpty()?"AUTO":obd.data.protocol):demo()?"AUTO / CAN":"--"};String[] units={"°C","V","%","g/s","°C","kPa","%","L/h",""};String[] icons={"temp","battery","engine","engine","temp","engine","engine","fuel","obd"};int[] accents={ORANGE,GREEN,AMBER,YELLOW,ORANGE,WHITE,AMBER,YELLOW,GREEN};int k=0;for(int row=0;row<3;row++)for(int col=0;col<3;col++){float l=m+col*(cardW+g),t=top+row*(cardH+g);infoCard(c,l,t,l+cardW,t+cardH,icons[k],labels[k],vals[k],units[k],accents[k]);k++;}}
-
-        private void drawErrors(Canvas c,float w,float h){float m=26*s,top=112*s,navTop=h-86*s,g=14*s,left=w*0.43f;fillRound(c,m,top,left,navTop-8*s,20,PANEL);strokeRound(c,m,top,left,navTop-8*s,20,BORDER,1);boolean has=obd.data.dtcs.length>0;text(c,has?"AVERÍAS DETECTADAS":"SISTEMA OBD",m+32*s,top+46*s,22,MUTED,Paint.Align.LEFT,true);text(c,has?String.valueOf(obd.data.dtcs.length):"OK",m+32*s,top+150*s,78,has?RED:GREEN,Paint.Align.LEFT,true);text(c,has?"códigos guardados":"Sin errores registrados",m+32*s,top+195*s,25,WHITE,Paint.Align.LEFT,true);text(c,obd.connected?"Conectado a "+(obd.deviceName.isEmpty()?"OBD":obd.deviceName):demo()?"Modo demostración":"Conecta el OBD para leer fallos",m+32*s,top+242*s,18,MUTED,Paint.Align.LEFT,false);float rL=left+g,rR=w-m;fillRound(c,rL,top,rR,top+285*s,20,PANEL);strokeRound(c,rL,top,rR,top+285*s,20,BORDER,1);text(c,"CÓDIGOS DTC",rL+26*s,top+40*s,21,MUTED,Paint.Align.LEFT,true);String[] codes=obd.data.dtcs;if(codes.length==0&&demo())codes=new String[]{"Sin códigos de avería"};if(codes.length==0)text(c,"No hay datos todavía",rL+26*s,top+96*s,26,WHITE,Paint.Align.LEFT,true);else for(int i=0;i<Math.min(codes.length,4);i++){int col=i%2,row=i/2;float x=rL+26*s+col*((rR-rL)/2f),y=top+94*s+row*82*s;text(c,codes[i],x,y,28,"Sin códigos de avería".equals(codes[i])?GREEN:RED,Paint.Align.LEFT,true);if(!"Sin códigos de avería".equals(codes[i]))text(c,"Código diagnóstico OBD-II",x,y+26*s,16,MUTED,Paint.Align.LEFT,false);}float bt=top+299*s;primaryRect.set(rL,bt,rL+(rR-rL-g)/2f,navTop-8*s);secondaryRect.set(primaryRect.right+g,bt,rR,navTop-8*s);fillRound(c,primaryRect.left,bt,primaryRect.right,navTop-8*s,17,Color.rgb(45,34,5));strokeRound(c,primaryRect.left,bt,primaryRect.right,navTop-8*s,17,YELLOW,1.5f);text(c,"LEER AVERÍAS",primaryRect.centerX(),bt+(navTop-8*s-bt)*0.55f,23,YELLOW,Paint.Align.CENTER,true);fillRound(c,secondaryRect.left,bt,secondaryRect.right,navTop-8*s,17,PANEL2);strokeRound(c,secondaryRect.left,bt,secondaryRect.right,navTop-8*s,17,RED,1.3f);text(c,"BORRAR CÓDIGOS",secondaryRect.centerX(),bt+(navTop-8*s-bt)*0.55f,23,RED,Paint.Align.CENTER,true);}
-
-        private void drawConnection(Canvas c,float w,float h){float m=26*s,top=112*s,navTop=h-86*s,g=14*s,left=w*0.48f;fillRound(c,m,top,left,navTop-8*s,20,PANEL);strokeRound(c,m,top,left,navTop-8*s,20,BORDER,1);text(c,"CONEXIÓN OBD",m+30*s,top+48*s,26,WHITE,Paint.Align.LEFT,true);text(c,"Vgate / ELM327 · Bluetooth Classic",m+30*s,top+82*s,18,MUTED,Paint.Align.LEFT,false);String st=obd.connected?"Conectado":obd.connecting?"Conectando...":"Desconectado";text(c,st,m+30*s,top+144*s,42,obd.connected?GREEN:obd.connecting?YELLOW:RED,Paint.Align.LEFT,true);if(obd.connected)text(c,obd.deviceName,m+30*s,top+180*s,21,WHITE,Paint.Align.LEFT,true);text(c,obd.statusMessage,m+30*s,top+220*s,18,MUTED,Paint.Align.LEFT,false);primaryRect.set(m+30*s,top+275*s,left-30*s,top+350*s);fillRound(c,primaryRect.left,primaryRect.top,primaryRect.right,primaryRect.bottom,16,Color.rgb(49,37,4));strokeRound(c,primaryRect.left,primaryRect.top,primaryRect.right,primaryRect.bottom,16,YELLOW,1.5f);text(c,obd.connected?"DESCONECTAR":"CONECTAR OBD",primaryRect.centerX(),primaryRect.centerY()+8*s,25,YELLOW,Paint.Align.CENTER,true);secondaryRect.set(m+30*s,top+367*s,left-30*s,top+432*s);fillRound(c,secondaryRect.left,secondaryRect.top,secondaryRect.right,secondaryRect.bottom,16,PANEL2);strokeRound(c,secondaryRect.left,secondaryRect.top,secondaryRect.right,secondaryRect.bottom,16,BORDER,1);text(c,"MODO DEMO: "+(obd.demoMode?"ACTIVO":"DESACTIVADO"),secondaryRect.centerX(),secondaryRect.centerY()+7*s,20,obd.demoMode?YELLOW:MUTED,Paint.Align.CENTER,true);fuelTypeRect.set(m+30*s,top+449*s,left-30*s,top+514*s);fillRound(c,fuelTypeRect.left,fuelTypeRect.top,fuelTypeRect.right,fuelTypeRect.bottom,16,PANEL2);strokeRound(c,fuelTypeRect.left,fuelTypeRect.top,fuelTypeRect.right,fuelTypeRect.bottom,16,BORDER,1);text(c,"COMBUSTIBLE: "+(obd.diesel?"DIÉSEL":"GASOLINA"),fuelTypeRect.centerX(),fuelTypeRect.centerY()+7*s,20,WHITE,Paint.Align.CENTER,true);float rL=left+g,rR=w-m;fillRound(c,rL,top,rR,navTop-8*s,20,PANEL);strokeRound(c,rL,top,rR,navTop-8*s,20,BORDER,1);text(c,"DISPOSITIVOS EMPAREJADOS",rL+26*s,top+42*s,20,MUTED,Paint.Align.LEFT,true);if(!activity.hasBluetoothPermission()){text(c,"Permite acceso a dispositivos cercanos",rL+26*s,top+96*s,24,WHITE,Paint.Align.LEFT,true);text(c,"Android necesita este permiso para usar el OBD.",rL+26*s,top+130*s,18,MUTED,Paint.Align.LEFT,false);}else{obd.refreshBondedDevices();int count=Math.min(4,obd.bonded.size());if(count==0){text(c,"No hay dispositivos emparejados",rL+26*s,top+96*s,25,WHITE,Paint.Align.LEFT,true);text(c,"Empareja primero el Vgate desde Ajustes > Bluetooth.",rL+26*s,top+132*s,18,MUTED,Paint.Align.LEFT,false);}for(int i=0;i<count;i++){float yt=top+64*s+i*92*s;deviceRects[i].set(rL+22*s,yt,rR-22*s,yt+76*s);fillRound(c,deviceRects[i].left,yt,deviceRects[i].right,yt+76*s,14,PANEL2);strokeRound(c,deviceRects[i].left,yt,deviceRects[i].right,yt+76*s,14,BORDER,1);BluetoothDevice d=obd.bonded.get(i);String name="OBD",addr="";try{if(d.getName()!=null)name=d.getName();addr=d.getAddress();}catch(Exception ignored){}text(c,name,deviceRects[i].left+22*s,yt+31*s,22,WHITE,Paint.Align.LEFT,true);text(c,addr,deviceRects[i].left+22*s,yt+56*s,15,MUTED,Paint.Align.LEFT,false);text(c,"CONECTAR",deviceRects[i].right-20*s,yt+45*s,18,YELLOW,Paint.Align.RIGHT,true);}}text(c,"Empareja el OBD una vez desde Android. Después puedes conectar desde aquí.",rL+26*s,navTop-30*s,16,MUTED,Paint.Align.LEFT,false);}
-
-        private void drawNav(Canvas c,float w,float h){float top=h-78*s;line(c,26*s,top,w-26*s,top,BORDER,1);String[] labs={"Inicio","Viaje","Motor","Errores"};for(int i=0;i<4;i++){float cx=w*(0.125f+0.25f*i);boolean active=page==i;int col=active?YELLOW:MUTED;String icon=i==0?"⌂":i==1?"↗":i==2?"⚙":"△";text(c,icon,cx,top+29*s,26,col,Paint.Align.CENTER,true);text(c,labs[i],cx,top+58*s,18,col,Paint.Align.CENTER,active);if(active)fillRound(c,cx-52*s,top+68*s,cx+52*s,top+72*s,2,col);}}
-        private void showToast(String msg){toast=msg;toastUntil=System.currentTimeMillis()+2300;invalidate();}
-        private void drawToast(Canvas c,float w,float h){if(System.currentTimeMillis()>toastUntil||toast.isEmpty())return;float tw=520*s,th=60*s,l=(w-tw)/2f,b=h-105*s,t=b-th;fillRound(c,l,t,l+tw,b,25,Color.rgb(28,31,34));strokeRound(c,l,t,l+tw,b,25,BORDER,1);text(c,toast,w/2f,t+39*s,20,WHITE,Paint.Align.CENTER,true);}
-
-        @Override public boolean onTouchEvent(MotionEvent e){if(e.getAction()!=MotionEvent.ACTION_UP)return true;float x=e.getX(),y=e.getY(),w=getWidth(),h=getHeight();if(statusRect.contains(x,y)){page=4;invalidate();return true;}if(y>h-92*s){page=Math.min(3,Math.max(0,(int)(x/(w/4f))));invalidate();return true;}if(page==1&&primaryRect.contains(x,y)){obd.resetTrip();showToast("Viaje reiniciado");return true;}if(page==3){if(primaryRect.contains(x,y)){if(obd.connected){obd.requestReadDtcs();showToast("Leyendo averías...");}else showToast("Conecta el OBD primero");return true;}if(secondaryRect.contains(x,y)){if(obd.connected){obd.requestClearDtcs();showToast("Borrando códigos...");}else showToast("Conecta el OBD primero");return true;}}if(page==4){if(primaryRect.contains(x,y)){if(obd.connected||obd.connecting){obd.disconnect();showToast("OBD desconectado");}else{obd.connectPreferred();showToast("Conectando con OBD...");}invalidate();return true;}if(secondaryRect.contains(x,y)){obd.demoMode=!obd.demoMode;invalidate();return true;}if(fuelTypeRect.contains(x,y)){obd.diesel=!obd.diesel;showToast(obd.diesel?"Perfil diésel":"Perfil gasolina");invalidate();return true;}for(int i=0;i<4;i++)if(deviceRects[i].contains(x,y)&&i<obd.bonded.size()){obd.connect(obd.bonded.get(i));showToast("Conectando...");return true;}}return true;}
     }
 }
