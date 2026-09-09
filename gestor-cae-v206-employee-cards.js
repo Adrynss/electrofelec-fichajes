@@ -108,11 +108,44 @@ async function savePhoto(name,p,t,old,b){
 }
 window.efWorkerPhoto=openPhotoModal;
 
+function workerNamesForCards(){
+  const names=new Map();
+  try{
+    for(const p of (window.caeZ?.profiles||[])){
+      if(!p?.full_name||p.active===false)continue;
+      if(!['employee','admin'].includes(String(p.role||'')))continue;
+      names.set(norm(p.full_name),String(p.full_name).trim());
+    }
+  }catch(e){}
+  try{
+    for(const w of (window.db?.workers||db?.workers||[])){
+      if(!w?.name||w.active===false)continue;
+      const k=norm(w.name);if(!names.has(k))names.set(k,String(w.name).trim());
+    }
+  }catch(e){}
+  return [...names.values()].sort((a,b)=>a.localeCompare(b,'es',{sensitivity:'base'}));
+}
+function ensureMissingWorkerDetails(root){
+  let details=[...root.querySelectorAll('details[data-worker]')];
+  if(window.dEF&&window.dEF!=='all')return details;
+  const existing=new Set(details.map(d=>norm(d.dataset.worker||'')));
+  const grid=root.querySelector('.ef-worker-grid');
+  const parent=grid||details[0]?.parentNode||root;
+  for(const name of workerNamesForCards()){
+    const k=norm(name);if(!k||existing.has(k))continue;
+    const d=document.createElement('details');
+    d.className='card';d.dataset.worker=name;d.style.padding='0';d.style.marginBottom='9px';
+    d.innerHTML='<summary style="cursor:pointer;padding:14px 16px;display:flex;justify-content:space-between;gap:14px"><b>'+esc2(name)+'</b><span class="muted small">0 archivos ▾</span></summary><div style="padding:0 12px 12px"><div class="doc-empty">0 archivos · carpeta preparada en Drive.</div></div>';
+    parent.appendChild(d);existing.add(k);
+  }
+  return [...root.querySelectorAll('details[data-worker]')];
+}
+
 let busy=false,timer=0;
 function apply(){
   if(busy||window.caeScope!=='employee')return;
   const root=document.getElementById('cae');if(!root)return;
-  const details=[...root.querySelectorAll('details[data-worker]')];if(!details.length)return;
+  const details=ensureMissingWorkerDetails(root);if(!details.length)return;
   busy=true;
   try{
     let grid=root.querySelector('.ef-worker-grid');
@@ -145,5 +178,5 @@ ensureStyle();
 const root=document.getElementById('cae');if(root)new MutationObserver(schedule).observe(root,{childList:true,subtree:true});
 setInterval(()=>{try{apply()}catch(e){}},900);
 setTimeout(apply,150);
-console.info('CAE/PRL Gestor PC · tarjetas empleados v206 · 5 columnas + DNI');
+console.info('CAE/PRL Gestor PC · tarjetas empleados v206 · incluye trabajadores con 0 archivos');
 })();
