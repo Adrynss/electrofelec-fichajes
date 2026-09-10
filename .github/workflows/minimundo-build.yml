@@ -50,13 +50,12 @@ jobs:
       - name: Download CC0 kids music
         run: |
           curl -L --fail --retry 3 -o children_soundtrack_1.wav "https://opengameart.org/sites/default/files/children_soundtrack_1.wav"
-          ffmpeg -y -loglevel error -i children_soundtrack_1.wav -c:a libvorbis -q:a 4 minimundo_cc0.ogg
           printf 'Children\x27s Game Music 1 - Picnic\nAuthor: heartade\nLicense: CC0\nSource: https://opengameart.org/content/childrens-game-music-1-picnic\n' > MUSIC-LICENSE.txt
       - name: Upload CC0 music
         uses: actions/upload-artifact@v4
         with:
           name: minimundo-music-cc0
           path: |
-            minimundo_cc0.ogg
+            children_soundtrack_1.wav
             MUSIC-LICENSE.txt
           if-no-files-found: error
