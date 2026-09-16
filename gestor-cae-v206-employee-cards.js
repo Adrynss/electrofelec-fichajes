@@ -123,12 +123,56 @@
       return true;
     };
 
+    const installFilterDisplay=()=>{
+      if(typeof window.driveSetFilter!=='function'||typeof window.renderCAE!=='function')return false;
+      if(window.driveSetFilter.__efDriveOnlyFilter)return true;
+      const baseSet=window.driveSetFilter;
+      const clean=()=>{
+        const mode=window.__efDriveFilter||'all';
+        if(mode==='all')return;
+        const root=document.getElementById('cae');if(!root)return;
+        const seenFiles=new Set();
+        for(const tr of [...root.querySelectorAll('.doc-files tbody tr')]){
+          let idx=null;
+          for(const b of tr.querySelectorAll('button')){
+            const s=b.getAttribute('onclick')||'',m=s.match(/(?:dd|d)(?:View|Delete|Replace)\((\d+)/);
+            if(m){idx=Number(m[1]);break}
+          }
+          const item=idx===null?null:window.driveDirectRows?.[idx];
+          if(!item?.l){tr.remove();continue}
+          const k=String(item.l.scope||'')+'|'+norm(item.l.rel||'');
+          if(seenFiles.has(k)){tr.remove();continue}
+          seenFiles.add(k);
+        }
+        const seenWorkers=new Set();
+        for(const d of [...root.querySelectorAll('details[data-worker]')]){
+          const k=norm(d.dataset.worker||d.querySelector('summary b')?.textContent||'');
+          if(k&&seenWorkers.has(k)){d.remove();continue}
+          if(k)seenWorkers.add(k);
+          const rows=d.querySelectorAll('.doc-files tbody tr').length;
+          if(!rows){d.style.display='none';continue}
+          d.style.display='';d.open=true;
+          const c=d.querySelector('summary .muted.small');if(c)c.textContent=rows+' archivos ▾';
+        }
+        for(const d of root.querySelectorAll('details[data-company-group]')){
+          const rows=d.querySelectorAll('.doc-files tbody tr').length;
+          d.style.display=rows?'':'none';if(rows)d.open=true;
+        }
+      };
+      const setFilter=function(f){window.__efDriveFilter=String(f||'all');return baseSet.apply(this,arguments)};
+      setFilter.__efDriveOnlyFilter=true;setFilter.__efBase=baseSet;window.driveSetFilter=setFilter;
+      const baseRender=window.renderCAE;
+      const render=async function(){const r=await baseRender.apply(this,arguments);clean();setTimeout(clean,0);setTimeout(clean,80);return r};
+      render.__efDriveFilterClean=true;render.__efBase=baseRender;window.renderCAE=render;
+      return true;
+    };
+
     let tries=0;
     const timer=setInterval(()=>{
       tries++;
-      const a=installBuild(),b=installReplace();
-      if((a&&b)||tries>=240)clearInterval(timer);
+      const a=installBuild(),b=installReplace(),c=installFilterDisplay();
+      if((a&&b&&c)||tries>=240)clearInterval(timer);
     },250);
-    installBuild();installReplace();
+    installBuild();installReplace();installFilterDisplay();
   }catch(e){console.error('CAE Drive/Supabase replacement fix',e)}
 })();
