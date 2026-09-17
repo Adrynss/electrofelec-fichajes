@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#071009">
+<title>Electrofelec Admin Web v5</title>
+<link rel="stylesheet" href="./style.css?v=5">
+</head>
+<body>
+<div id="login" class="login">
+  <div class="loginCard">
+    <div class="brandLogin">
+      <svg class="efLogo" viewBox="0 0 512 483" aria-label="Electrofelec"><defs><linearGradient id="efLogin" x1="55" y1="440" x2="455" y2="45" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#005d3e"/><stop offset=".48" stop-color="#13ad28"/><stop offset="1" stop-color="#8be900"/></linearGradient></defs><path d="M345 44 L334 74 L397 120 L434 180 L445 227 L445 265 L435 306 L402 360 L357 398 L294 423 L222 422 L199 452 L274 460 L348 441 L392 415 L423 387 L465 320 L476 278 L478 240 L459 160 L411 90 Z" fill="url(#efLogin)"/><path d="M310 31 L274 25 L229 27 L153 54 L92 105 L52 173 L42 210 L39 262 L54 327 L89 383 L125 416 L168 440 L182 409 L153 394 L120 366 L93 329 L78 293 L72 231 L84 178 L115 126 L163 85 L227 60 L289 60 Z" fill="url(#efLogin)"/><path d="M346 3 L140 275 L251 277 L162 479 L382 207 L274 206 Z" fill="url(#efLogin)"/></svg>
+      <div><b>Electrofelec Admin</b><small>Web de prueba · v5</small></div>
+    </div>
+    <div class="field"><label>USUARIO</label><input id="username" autocomplete="username" autocapitalize="none"></div>
+    <div class="field"><label>PIN</label><input id="pin" type="password" inputmode="numeric" maxlength="6" autocomplete="current-password"></div>
+    <button id="loginBtn" class="btn primary full">ENTRAR</button>
+    <div id="loginMsg" class="msg"></div>
+  </div>
+</div>
+<div id="shell" class="app hidden">
+  <aside id="sidebar" class="sidebar">
+    <div class="sideBrand">
+      <svg class="efLogo" viewBox="0 0 512 483" aria-hidden="true"><defs><linearGradient id="efSide" x1="55" y1="440" x2="455" y2="45" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#005d3e"/><stop offset=".48" stop-color="#13ad28"/><stop offset="1" stop-color="#8be900"/></linearGradient></defs><path d="M345 44 L334 74 L397 120 L434 180 L445 227 L445 265 L435 306 L402 360 L357 398 L294 423 L222 422 L199 452 L274 460 L348 441 L392 415 L423 387 L465 320 L476 278 L478 240 L459 160 L411 90 Z" fill="url(#efSide)"/><path d="M310 31 L274 25 L229 27 L153 54 L92 105 L52 173 L42 210 L39 262 L54 327 L89 383 L125 416 L168 440 L182 409 L153 394 L120 366 L93 329 L78 293 L72 231 L84 178 L115 126 L163 85 L227 60 L289 60 Z" fill="url(#efSide)"/><path d="M346 3 L140 275 L251 277 L162 479 L382 207 L274 206 Z" fill="url(#efSide)"/></svg>
+      <div><b>Electrofelec</b><small>ADMIN WEB</small></div>
+    </div>
+    <nav class="nav">
+      <button data-page="dashboard" class="active">⌂ <span>Inicio</span></button>
+      <button data-page="mine" class="personalNav">● <span>Mi zona</span></button>
+      <div class="navTitle">Personal</div>
+      <button data-page="workers">👷 <span>Trabajadores</span></button>
+      <button data-page="punches">✓ <span>Fichajes empresa</span></button>
+      <button data-page="hours">◷ <span>Registro de horas</span></button>
+      <button data-page="payroll">€ <span>Nóminas empresa</span></button>
+      <div class="navTitle">Documentación</div>
+      <button data-page="cae">📁 <span>CAE / PRL</span></button>
+      <button data-page="company">🏢 <span>Empresa</span></button>
+      <div class="navTitle">Gestión</div>
+      <button data-page="accounting">▤ <span>Contabilidad</span></button>
+      <button data-page="rates">€/h <span>Precio hora obra</span></button>
+    </nav>
+    <div class="sideFoot"><div id="sideWho">Administrador</div><button id="logout" class="btn" style="margin-top:9px">Cerrar sesión</button></div>
+  </aside>
+  <div id="shade" class="shade"></div>
+  <main class="main">
+    <header class="top"><div class="topLeft"><button id="hamb" class="btn hamb">☰</button><svg class="efLogo" style="width:30px;height:30px" viewBox="0 0 512 483" aria-hidden="true"><defs><linearGradient id="efTop" x1="55" y1="440" x2="455" y2="45" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#005d3e"/><stop offset=".48" stop-color="#13ad28"/><stop offset="1" stop-color="#8be900"/></linearGradient></defs><path d="M345 44 L334 74 L397 120 L434 180 L445 227 L445 265 L435 306 L402 360 L357 398 L294 423 L222 422 L199 452 L274 460 L348 441 L392 415 L423 387 L465 320 L476 278 L478 240 L459 160 L411 90 Z" fill="url(#efTop)"/><path d="M310 31 L274 25 L229 27 L153 54 L92 105 L52 173 L42 210 L39 262 L54 327 L89 383 L125 416 L168 440 L182 409 L153 394 L120 366 L93 329 L78 293 L72 231 L84 178 L115 126 L163 85 L227 60 L289 60 Z" fill="url(#efTop)"/><path d="M346 3 L140 275 L251 277 L162 479 L382 207 L274 206 Z" fill="url(#efTop)"/></svg><div><b id="topTitle">Inicio</b><small id="topSub">Electrofelec System</small></div></div><span class="pill">● ONLINE</span></header>
+    <section id="content" class="content"></section>
+  </main>
+</div>
+<div id="sigOverlay" class="overlay hidden">
+ <div class="sigBox">
+  <h2 id="sigTitle">Firma</h2><div id="sigSub" class="muted"></div>
+  <div class="canvasWrap"><canvas id="sigCanvas"></canvas></div>
+  <div id="sigMsg" class="sigMsg">Firma dentro del recuadro con el dedo.</div>
+  <div class="sigActions"><button id="sigClear" class="btn">Borrar</button><button id="sigCancel" class="btn">Cancelar</button><button id="sigSave" class="btn primary">Firmar</button></div>
+ </div>
+</div>
+<script src="./app.js?v=5"></script>
+<script src="./enhancements.js?v=5"></script>
+</body>
+</html>
