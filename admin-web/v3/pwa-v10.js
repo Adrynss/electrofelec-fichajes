@@ -1,6 +1,6 @@
 (function(){
 'use strict';
-if(window.__efPwaV11)return;window.__efPwaV11=true;
+if(window.__efPwaV12)return;window.__efPwaV12=true;
 
 let deferred=null;
 function standalone(){
@@ -41,15 +41,15 @@ window.addEventListener('appinstalled',()=>{
 async function initPwa(){
   if(standalone()||!('serviceWorker' in navigator))return;
   try{
-    const reg=await navigator.serviceWorker.register('./service-worker.js?v=11',{scope:'./'});
+    const reg=await navigator.serviceWorker.register('./service-worker.js?v=12',{scope:'./'});
     await navigator.serviceWorker.ready;
 
     // En la primera visita el SW puede quedar activo pero la página aún no estar controlada.
     // Samsung Internet suele evaluar la instalabilidad correctamente tras esa primera recarga.
-    if(!navigator.serviceWorker.controller && sessionStorage.getItem('efPwaReloadedV11')!=='1'){
-      sessionStorage.setItem('efPwaReloadedV11','1');
+    if(!navigator.serviceWorker.controller && sessionStorage.getItem('efPwaReloadedV12')!=='1'){
+      sessionStorage.setItem('efPwaReloadedV12','1');
       const u=new URL(location.href);
-      u.searchParams.set('v','11');
+      u.searchParams.set('v','12');
       location.replace(u.toString());
       return;
     }
