@@ -48,7 +48,7 @@ const scripts=[
  ['gestor-accounting-v202-cloud-sync.js',1],
  ['gestor-accounting-v208-import-stable.js',2],
  ['gestor-accounting-v209-stability-sort.js',1],
- ['gestor-accounting-v210-order-side-preview.js',1]
+ ['gestor-accounting-v210-order-side-preview.js',2]
 ];
 for(let [file,ver] of scripts)await load(file,ver);
 stabilizeAccountingImportHooks();
