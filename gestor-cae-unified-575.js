@@ -317,7 +317,7 @@ fixAll();
 })();
 (function(){
 const s=document.createElement('style');s.id='ef-cae-unified-columns-575';
-s.textContent='#cae .doc-files table th:nth-child(2),#cae .doc-files table td:nth-child(2),#cae .doc-files table th:nth-child(3),#cae .doc-files table td:nth-child(3){display:table-cell!important;visibility:visible!important;opacity:1!important}#cae .doc-files table.cae-compact-table th:nth-child(4),#cae .doc-files table.cae-compact-table td:nth-child(4){display:table-cell!important}';document.head.appendChild(s);
+s.textContent='#cae .doc-files table th:nth-child(2),#cae .doc-files table td:nth-child(2){display:table-cell!important;visibility:visible!important;opacity:1!important}#cae .doc-files table.cae-compact-table th:nth-child(3),#cae .doc-files table.cae-compact-table td:nth-child(3),#cae .doc-files table.cae-compact-table th:nth-child(4),#cae .doc-files table.cae-compact-table td:nth-child(4){display:none!important}';document.head.appendChild(s);
 })();
 (function(){
  const render=window.renderCAE;let running=null,pending=false;
