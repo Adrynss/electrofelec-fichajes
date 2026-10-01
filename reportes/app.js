@@ -33,7 +33,7 @@ async function put(x){let d=await db();return new Promise((ok,no)=>{let t=d.tran
 async function all(){let d=await db();return new Promise((ok,no)=>{let r=d.transaction(ST).objectStore(ST).getAll();r.onsuccess=()=>ok(r.result.sort((a,b)=>b.ts-a.ts));r.onerror=()=>no(r.error)})}
 async function get(id){let d=await db();return new Promise((ok,no)=>{let r=d.transaction(ST).objectStore(ST).get(id);r.onsuccess=()=>ok(r.result);r.onerror=()=>no(r.error)})}
 async function del(id){let d=await db();return new Promise((ok,no)=>{let t=d.transaction(ST,"readwrite");t.objectStore(ST).delete(id);t.oncomplete=ok;t.onerror=()=>no(t.error)})}
-function preparar(){let d=datos(),id=actual||(crypto.randomUUID?crypto.randomUUID():"r"+Date.now()),p=pdf(d),blob=p.output("blob"),nombre=`Reporte_${d.fecha}_${d.obra.replace(/[^\\w -]/g,"").replace(/\\s+/g,"_")}.pdf`,ts=Date.now();actual=id;return{id,d,blob,nombre,ts}}
+function preparar(){let d=datos(),id=actual||(crypto.randomUUID?crypto.randomUUID():"r"+Date.now()),p=pdf(d),blob=p.output("blob"),nombre=`Reporte_${d.fecha}_${d.obra.replace(/[^\w -]/g,"").replace(/\s+/g,"_")}.pdf`,ts=Date.now();actual=id;return{id,d,blob,nombre,ts}}
 async function guardarPreparado(r){await put({id:r.id,d:r.d,blob:r.blob,nombre:r.nombre,ts:r.ts});localStorage.removeItem("reporte_borrador");await historial();return r}
 function guardarSinEsperar(r){put({id:r.id,d:r.d,blob:r.blob,nombre:r.nombre,ts:r.ts}).then(()=>{localStorage.removeItem("reporte_borrador");historial()}).catch(e=>console.error("Error guardando reporte",e))}
 async function guardar(){return guardarPreparado(preparar())}
