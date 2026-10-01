@@ -1,1 +1,10 @@
-const C="electrofelec-reportes-v6",A=["./","./index.html","./reportes.css","./app.js?v=6","./manifest.webmanifest","../style.css","../icon.svg"];self.addEventListener("install",e=>e.waitUntil(caches.open(C).then(c=>c.addAll(A)).then(()=>self.skipWaiting())));self.addEventListener("activate",e=>e.waitUntil(caches.keys().then(k=>Promise.all(k.filter(x=>x.startsWith("electrofelec-reportes-")&&x!==C).map(x=>caches.delete(x)))).then(()=>self.clients.claim())));self.addEventListener("fetch",e=>{if(e.request.method!=="GET")return;e.respondWith(fetch(e.request).then(r=>{let x=r.clone();caches.open(C).then(c=>c.put(e.request,x));return r}).catch(()=>caches.match(e.request)))})
+self.addEventListener("install",e=>{self.skipWaiting()});
+self.addEventListener("activate",e=>{
+  e.waitUntil(
+    caches.keys()
+      .then(keys=>Promise.all(keys.filter(k=>k.startsWith("electrofelec-reportes-")).map(k=>caches.delete(k))))
+      .then(()=>self.registration.unregister())
+      .then(()=>self.clients.matchAll({type:"window"}))
+      .then(clients=>clients.forEach(c=>c.navigate(c.url)))
+  );
+});
