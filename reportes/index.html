@@ -49,7 +49,7 @@
   <div class="sectionTitle">Crear reporte</div>
   <section class="card">
 <div class="actionGrid one"><button class="primaryBtn" onclick="crearAbrirPDF()">Crear y abrir PDF</button></div>
-    <div class="help">El PDF se abrirá en el visor del móvil. Desde allí puedes compartirlo por WhatsApp, correo, Drive, etc.</div>
+    <div class="help">El PDF se abrirá en el visor del móvil. Desde allí puedes compartirlo con cualquier aplicación.</div>
     <div id="estado" class="msg"></div>
   </section>
 
@@ -58,6 +58,14 @@
 </main>
 </div>
 <div class="bottomActions one"><button class="primaryBtn" onclick="crearAbrirPDF()">Crear y abrir PDF</button></div>
-<script src="./app.js?v=6"></script>
+<script>
+  if('serviceWorker' in navigator){
+    navigator.serviceWorker.getRegistrations().then(rs=>rs.forEach(r=>r.unregister())).catch(()=>{});
+  }
+  if('caches' in window){
+    caches.keys().then(keys=>Promise.all(keys.filter(k=>k.startsWith('electrofelec-reportes-')).map(k=>caches.delete(k)))).catch(()=>{});
+  }
+  </script>
+  <script src="./app.js?v=7"></script>
 </body>
 </html>
