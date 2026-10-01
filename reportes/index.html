@@ -48,9 +48,8 @@
 
   <div class="sectionTitle">Crear reporte</div>
   <section class="card">
-    <div id="browserAviso" class="browserAviso hidden"><b>Para enviar el PDF directamente por WhatsApp, abre esta app en Chrome.</b><button class="primaryBtn" onclick="abrirEnChrome()">Abrir en Chrome</button></div>
-    <div class="actionGrid"><button class="primaryBtn" onclick="crearDescargar()">Crear PDF</button><button class="waBtn" onclick="crearCompartir()">Enviar por WhatsApp</button></div>
-    <div class="help">WhatsApp abre el menú de compartir de Android con el PDF adjunto.</div>
+<div class="actionGrid one"><button class="primaryBtn" onclick="crearAbrirPDF()">Crear y abrir PDF</button></div>
+    <div class="help">El PDF se abrirá en el visor del móvil. Desde allí puedes compartirlo por WhatsApp, correo, Drive, etc.</div>
     <div id="estado" class="msg"></div>
   </section>
 
@@ -58,7 +57,7 @@
   <section class="card"><div id="historial"></div></section>
 </main>
 </div>
-<div class="bottomActions"><button class="primaryBtn" onclick="crearDescargar()">Crear PDF</button><button class="waBtn" onclick="crearCompartir()">WhatsApp</button></div>
-<script src="./app.js?v=5"></script>
+<div class="bottomActions one"><button class="primaryBtn" onclick="crearAbrirPDF()">Crear y abrir PDF</button></div>
+<script src="./app.js?v=6"></script>
 </body>
 </html>
