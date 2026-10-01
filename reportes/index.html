@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#022412">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Reportes">
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="icon" href="../icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="../style.css">
+<link rel="stylesheet" href="./reportes.css">
+<title>Electrofelec · Reportes diarios</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+</head>
+<body>
+<div class="appShell">
+<header class="topbar">
+  <div class="brand"><img class="brandLogo" src="../icon.svg" alt=""><div class="brandWords"><div class="wordmark">ELECTROFELEC</div><div class="personName">Reportes diarios de obra</div></div></div>
+  <button class="online" onclick="nuevo()">NUEVO</button>
+</header>
+<main class="page">
+  <section class="hero"><div class="muted small">PARTE DE TRABAJO</div><div class="heroTitle">Reporte diario</div><div id="fechaLarga" class="muted small"></div></section>
+
+  <div class="sectionTitle">Datos del reporte</div>
+  <section class="card">
+    <div class="two">
+      <div class="fieldWrap"><label class="fieldLabel">Fecha</label><input id="fecha" type="date"></div>
+      <div class="fieldWrap"><label class="fieldLabel">Obra</label><input id="obra" placeholder="Nombre de la obra"></div>
+    </div>
+    <div class="fieldWrap"><label class="fieldLabel">Horario</label><input id="horario" placeholder="Ej. 07:00 - 17:00"></div>
+  </section>
+
+  <div class="sectionTitle">Trabajadores</div>
+  <section class="card">
+    <div class="addWorker"><input id="trabajador" placeholder="Nombre del trabajador"><button class="primaryBtn" onclick="anadirTrabajador()">Añadir</button></div>
+    <div id="listaTrabajadores"></div>
+    <div class="help">Añade uno a uno los trabajadores que han estado en la obra.</div>
+  </section>
+
+  <div class="sectionTitle">Trabajo realizado</div>
+  <section class="card">
+    <div class="fieldWrap"><label class="fieldLabel">Trabajos realizados</label><textarea id="trabajos" class="big" placeholder="Describe los trabajos realizados durante el día..."></textarea></div>
+    <div class="fieldWrap"><label class="fieldLabel">Material utilizado</label><textarea id="material" placeholder="Materiales, cantidades, referencias..."></textarea></div>
+    <div class="fieldWrap"><label class="fieldLabel">Incidencias / pendientes</label><textarea id="incidencias" placeholder="Incidencias, problemas o trabajos pendientes..."></textarea></div>
+    <div class="fieldWrap"><label class="fieldLabel">Observaciones</label><textarea id="observaciones" placeholder="Observaciones adicionales..."></textarea></div>
+  </section>
+
+  <div class="sectionTitle">Crear reporte</div>
+  <section class="card">
+    <div class="actionGrid"><button class="primaryBtn" onclick="crearDescargar()">Crear PDF</button><button class="waBtn" onclick="crearCompartir()">Enviar por WhatsApp</button></div>
+    <div class="help">WhatsApp abre el menú de compartir de Android con el PDF adjunto.</div>
+    <div id="estado" class="msg"></div>
+  </section>
+
+  <div class="sectionTitle">Reportes guardados <span id="contador" class="pill green">0</span></div>
+  <section class="card"><div id="historial"></div></section>
+</main>
+</div>
+<div class="bottomActions"><button class="primaryBtn" onclick="crearDescargar()">Crear PDF</button><button class="waBtn" onclick="crearCompartir()">WhatsApp</button></div>
+<script src="./app.js"></script>
+</body>
+</html>

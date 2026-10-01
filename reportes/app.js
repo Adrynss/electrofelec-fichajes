@@ -1,0 +1,46 @@
+const $=id=>document.getElementById(id);let trabajadores=[],actual=null;
+const hoy=()=>{let d=new Date(),x=new Date(d-d.getTimezoneOffset()*60000);return x.toISOString().slice(0,10)};
+const fechaES=x=>{if(!x)return"";let[y,m,d]=x.split("-");return`${d}/${m}/${y}`};
+const fechaLarga=x=>{let[y,m,d]=x.split("-").map(Number);return new Date(y,m-1,d).toLocaleDateString("es-ES",{weekday:"long",day:"numeric",month:"long",year:"numeric"})};
+const esc=s=>String(s||"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const datos=()=>({fecha:$("fecha").value,obra:$("obra").value.trim(),horario:$("horario").value.trim(),trabajadores:[...trabajadores],trabajos:$("trabajos").value.trim(),material:$("material").value.trim(),incidencias:$("incidencias").value.trim(),observaciones:$("observaciones").value.trim()});
+function estado(t,ok=false){$("estado").textContent=t;$("estado").style.color=ok?"var(--green)":"var(--muted)"}
+function guardarBorrador(){try{localStorage.setItem("reporte_borrador",JSON.stringify(datos()))}catch{}}
+function pintarFecha(){$("fechaLarga").textContent=fechaLarga($("fecha").value||hoy())}
+function pintarTrabajadores(){$("listaTrabajadores").innerHTML=trabajadores.length?trabajadores.map((n,i)=>`<div class="worker"><div class="workerNum">${i+1}</div><div class="workerName">${esc(n)}</div><button class="remove" onclick="quitarTrabajador(${i})">×</button></div>`).join(""):'<div class="empty">Todavía no hay trabajadores añadidos.</div>'}
+function anadirTrabajador(){let i=$("trabajador"),n=i.value.trim();if(!n)return;trabajadores.push(n);i.value="";pintarTrabajadores();guardarBorrador();i.focus()}
+function quitarTrabajador(i){trabajadores.splice(i,1);pintarTrabajadores();guardarBorrador()}
+function cargar(d,id=null){actual=id;$("fecha").value=d.fecha||hoy();$("obra").value=d.obra||"";$("horario").value=d.horario||"";trabajadores=Array.isArray(d.trabajadores)?d.trabajadores:[];$("trabajos").value=d.trabajos||"";$("material").value=d.material||"";$("incidencias").value=d.incidencias||"";$("observaciones").value=d.observaciones||"";pintarTrabajadores();pintarFecha();scrollTo({top:0,behavior:"smooth"})}
+function nuevo(){if(confirm("¿Crear un reporte nuevo?")){actual=null;trabajadores=[];cargar({fecha:hoy(),trabajadores:[]});localStorage.removeItem("reporte_borrador");estado("")}}
+function validar(){if(!$("obra").value.trim()){alert("Indica la obra.");$("obra").focus();return false}if(!$("trabajos").value.trim()){alert("Indica los trabajos realizados.");$("trabajos").focus();return false}return true}
+function pdf(d){
+ const {jsPDF}=window.jspdf,doc=new jsPDF(),M=16,W=178;let y=18;
+ doc.setFillColor(2,36,18);doc.rect(0,0,210,28,"F");doc.setFillColor(74,213,22);doc.rect(0,28,210,2,"F");
+ doc.setTextColor(255);doc.setFont("helvetica","bold");doc.setFontSize(17);doc.text("ELECTROFELEC SYSTEM",M,14);
+ doc.setFont("helvetica","normal");doc.setFontSize(8);doc.text("Instalaciones electricas · PCI · Domotica",M,21);
+ y=42;doc.setTextColor(20,30,23);doc.setFont("helvetica","bold");doc.setFontSize(15);doc.text("REPORTE DIARIO DE OBRA",M,y);y+=10;
+ const line=(label,value)=>{doc.setFont("helvetica","bold");doc.setFontSize(10);doc.text(label,M,y);doc.setFont("helvetica","normal");let a=doc.splitTextToSize(value||"-",W-35);doc.text(a,M+35,y);y+=Math.max(6,a.length*5)};
+ const page=()=>{doc.addPage();doc.setFillColor(2,36,18);doc.rect(0,0,210,18,"F");doc.setFillColor(74,213,22);doc.rect(0,18,210,1.5,"F");doc.setTextColor(255);doc.setFont("helvetica","bold");doc.setFontSize(11);doc.text("ELECTROFELEC SYSTEM",M,12);doc.setTextColor(20,30,23);y=30};
+ const sec=(title,text)=>{if(y>250)page();y+=3;doc.setTextColor(35,130,50);doc.setFont("helvetica","bold");doc.setFontSize(10);doc.text(title,M,y);y+=6;doc.setTextColor(20,30,23);doc.setFont("helvetica","normal");let a=doc.splitTextToSize(text||"-",W);for(let t of a){if(y>278)page();doc.text(t,M,y);y+=5}y+=4};
+ line("Fecha:",fechaES(d.fecha));line("Obra:",d.obra);line("Horario:",d.horario);
+ sec("TRABAJADORES",d.trabajadores.length?d.trabajadores.map((n,i)=>`${i+1}. ${n}`).join("\n"):"-");
+ sec("TRABAJOS REALIZADOS",d.trabajos);sec("MATERIAL UTILIZADO",d.material);sec("INCIDENCIAS / PENDIENTES",d.incidencias);sec("OBSERVACIONES",d.observaciones);
+ if(y>250)page();y+=12;doc.setDrawColor(100);doc.line(M,y,80,y);doc.line(125,y,194,y);doc.setFontSize(8);doc.setTextColor(100);doc.text("Firma responsable",M,y+5);doc.text("Firma cliente / direccion de obra",125,y+5);
+ return doc}
+const DB="ElectrofelecReportes",ST="reportes";
+function db(){return new Promise((ok,no)=>{let r=indexedDB.open(DB,1);r.onupgradeneeded=()=>r.result.objectStoreNames.contains(ST)||r.result.createObjectStore(ST,{keyPath:"id"});r.onsuccess=()=>ok(r.result);r.onerror=()=>no(r.error)})}
+async function put(x){let d=await db();return new Promise((ok,no)=>{let t=d.transaction(ST,"readwrite");t.objectStore(ST).put(x);t.oncomplete=ok;t.onerror=()=>no(t.error)})}
+async function all(){let d=await db();return new Promise((ok,no)=>{let r=d.transaction(ST).objectStore(ST).getAll();r.onsuccess=()=>ok(r.result.sort((a,b)=>b.ts-a.ts));r.onerror=()=>no(r.error)})}
+async function get(id){let d=await db();return new Promise((ok,no)=>{let r=d.transaction(ST).objectStore(ST).get(id);r.onsuccess=()=>ok(r.result);r.onerror=()=>no(r.error)})}
+async function del(id){let d=await db();return new Promise((ok,no)=>{let t=d.transaction(ST,"readwrite");t.objectStore(ST).delete(id);t.oncomplete=ok;t.onerror=()=>no(t.error)})}
+async function guardar(){let d=datos(),id=actual||(crypto.randomUUID?crypto.randomUUID():"r"+Date.now()),p=pdf(d),blob=p.output("blob"),nombre=`Reporte_${d.fecha}_${d.obra.replace(/[^\w -]/g,"").replace(/\s+/g,"_")}.pdf`;actual=id;await put({id,d,blob,nombre,ts:Date.now()});localStorage.removeItem("reporte_borrador");await historial();return{d,blob,nombre}}
+function descargar(blob,nombre){let u=URL.createObjectURL(blob),a=document.createElement("a");a.href=u;a.download=nombre;a.click();setTimeout(()=>URL.revokeObjectURL(u),3000)}
+async function compartir(r){let f=new File([r.blob],r.nombre,{type:"application/pdf"});if(!navigator.share||navigator.canShare&&!navigator.canShare({files:[f]}))return false;await navigator.share({title:`Reporte diario - ${r.d.obra}`,text:`Reporte diario ${fechaES(r.d.fecha)} - ${r.d.obra}`,files:[f]});return true}
+async function crearDescargar(){if(!validar())return;try{estado("Creando PDF...");let r=await guardar();descargar(r.blob,r.nombre);estado("PDF creado y reporte guardado.",true)}catch(e){console.error(e);estado("No se ha podido crear el PDF.")}}
+async function crearCompartir(){if(!validar())return;try{estado("Preparando PDF...");let r=await guardar(),ok=await compartir(r);if(ok)estado("Reporte guardado. Elige WhatsApp para enviarlo.",true);else{descargar(r.blob,r.nombre);estado("El navegador no permite compartir el archivo; se ha descargado.")}}catch(e){if(e?.name==="AbortError")estado("Envío cancelado. El reporte sigue guardado.");else{console.error(e);estado("No se ha podido abrir el menú de compartir.")}}}
+async function abrir(id){let r=await get(id);if(r){cargar(r.d,id);estado("Reporte abierto.",true)}}
+async function bajar(id){let r=await get(id);if(r)descargar(r.blob,r.nombre)}
+async function reenviar(id){let r=await get(id);if(!r)return;try{let ok=await compartir({d:r.d,blob:r.blob,nombre:r.nombre});if(!ok)descargar(r.blob,r.nombre)}catch(e){}}
+async function borrar(id){if(confirm("¿Eliminar este reporte?")){await del(id);if(actual===id)actual=null;historial()}}
+async function historial(){let l=await all();$("contador").textContent=l.length;$("historial").innerHTML=l.length?l.map(r=>`<div class="saved"><div class="savedTitle">${esc(r.d.obra)}</div><div class="savedMeta">${fechaES(r.d.fecha)} · ${r.d.trabajadores?.length||0} trabajador(es)</div><div class="savedActions"><button onclick="abrir('${r.id}')">Abrir</button><button onclick="bajar('${r.id}')">PDF</button><button class="share" onclick="reenviar('${r.id}')">WhatsApp</button><button class="delete" onclick="borrar('${r.id}')">Eliminar</button></div></div>`).join(""):'<div class="empty">Todavía no hay reportes guardados.</div>'}
+addEventListener("DOMContentLoaded",async()=>{$("fecha").value=hoy();pintarFecha();$("trabajador").addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();anadirTrabajador()}});$("fecha").addEventListener("change",()=>{pintarFecha();guardarBorrador()});["obra","horario","trabajos","material","incidencias","observaciones"].forEach(id=>$(id).addEventListener("input",guardarBorrador));let b=localStorage.getItem("reporte_borrador");if(b)try{cargar(JSON.parse(b))}catch{};await historial();if("serviceWorker"in navigator)navigator.serviceWorker.register("./sw.js").catch(()=>{})});
