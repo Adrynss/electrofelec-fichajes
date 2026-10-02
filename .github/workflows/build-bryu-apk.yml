@@ -1,0 +1,81 @@
+name: Build BRYU APK
+
+on:
+  push:
+    branches: [ bryu-apk-build ]
+    paths:
+      - 'bryu/**'
+      - 'settings.gradle'
+      - '.github/workflows/build-bryu-apk.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK
+        run: yes | sdkmanager "platforms;android-35" "build-tools;35.0.0"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.10.2'
+
+      - name: Prepare BRYU UI
+        run: |
+          mkdir -p bryu/src/main/assets bryu/src/main/res/drawable
+          cat bryu/ui/index_*.b64 | base64 -d | gzip -dc > bryu/src/main/assets/index.html
+          cat bryu/ui/icon_*.b64 | base64 -d > bryu/src/main/assets/bryu_icon.webp
+          cp bryu/src/main/assets/bryu_icon.webp bryu/src/main/res/drawable/bryu_icon.webp
+          test -s bryu/src/main/assets/index.html
+          test -s bryu/src/main/res/drawable/bryu_icon.webp
+
+      - name: Validate BRYU JavaScript
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          html=Path('bryu/src/main/assets/index.html').read_text(encoding='utf-8')
+          scripts=re.findall(r'<script(?:\s[^>]*)?>(.*?)</script>',html,re.S|re.I)
+          if not scripts:
+              raise SystemExit('No JavaScript')
+          Path('/tmp/bryu.js').write_text('\n'.join(scripts),encoding='utf-8')
+          print('JavaScript extraído:', sum(map(len,scripts)), 'bytes')
+          PY
+          node --check /tmp/bryu.js
+
+      - name: Build BRYU debug APK
+        run: gradle :bryu:assembleDebug
+
+      - name: Verify APK
+        run: |
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose bryu/build/outputs/apk/debug/bryu-debug.apk
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging bryu/build/outputs/apk/debug/bryu-debug.apk | tee /tmp/badging.txt
+          grep -q "package: name='com.bryu.app'" /tmp/badging.txt
+
+      - name: Rename APK
+        run: |
+          cp bryu/build/outputs/apk/debug/bryu-debug.apk BRYU_v0_1_TEST.apk
+          test -s BRYU_v0_1_TEST.apk
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: BRYU_v0_1_TEST
+          path: BRYU_v0_1_TEST.apk
+          if-no-files-found: error
