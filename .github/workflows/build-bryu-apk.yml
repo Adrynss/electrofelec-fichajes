@@ -37,14 +37,17 @@ jobs:
         with:
           gradle-version: '8.10.2'
 
-      - name: Prepare BRYU UI
+      - name: Prepare BRYU v0.2 UI and icon
         run: |
           mkdir -p bryu/src/main/assets bryu/src/main/res/drawable
           cat bryu/ui/index_*.b64 | base64 -d | gzip -dc > bryu/src/main/assets/index.html
-          cat bryu/ui/icon_*.b64 | base64 -d > bryu/src/main/assets/bryu_icon.webp
-          cp bryu/src/main/assets/bryu_icon.webp bryu/src/main/res/drawable/bryu_icon.webp
+          cat bryu/ui/icon_*.b64 | base64 -d > /tmp/bryu_original.webp
+          cp /tmp/bryu_original.webp bryu/src/main/assets/bryu_icon.webp
+          python -m pip install --quiet pillow
+          python bryu/patch_v02.py
           test -s bryu/src/main/assets/index.html
-          test -s bryu/src/main/res/drawable/bryu_icon.webp
+          test -s bryu/src/main/res/drawable/bryu_icon_foreground.png
+          test -s bryu/src/main/res/drawable/bryu_icon_legacy.png
 
       - name: Validate BRYU JavaScript
         run: |
@@ -68,15 +71,17 @@ jobs:
           "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose bryu/build/outputs/apk/debug/bryu-debug.apk
           "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging bryu/build/outputs/apk/debug/bryu-debug.apk | tee /tmp/badging.txt
           grep -q "package: name='com.bryu.app'" /tmp/badging.txt
+          grep -q "versionCode='2'" /tmp/badging.txt
+          grep -q "versionName='0.2-test'" /tmp/badging.txt
 
       - name: Rename APK
         run: |
-          cp bryu/build/outputs/apk/debug/bryu-debug.apk BRYU_v0_1_TEST.apk
-          test -s BRYU_v0_1_TEST.apk
+          cp bryu/build/outputs/apk/debug/bryu-debug.apk BRYU_v0_2_TEST.apk
+          test -s BRYU_v0_2_TEST.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: BRYU_v0_1_TEST
-          path: BRYU_v0_1_TEST.apk
+          name: BRYU_v0_2_TEST
+          path: BRYU_v0_2_TEST.apk
           if-no-files-found: error
